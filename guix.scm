@@ -29,6 +29,7 @@
   (guix git-download)
   (guix build-system cmake)
   (gnu packages algebra)
+  (gnu packages autotools)
   (gnu packages base)
   (gnu packages compression)
   (gnu packages bioinformatics)
@@ -60,18 +61,24 @@
     (source (local-file %source-dir #:recursive? #t))
     (build-system cmake-build-system)
     (inputs
-     `(("curl" ,curl)
+     `(
+       ;; ("curl" ,curl) for htslib
+       ("autoconf" ,autoconf) ;; for external htslib
+       ("automake" ,automake) ;; for external htslib
        ("fastahack" ,fastahack)
        ("gcc" ,gcc-11)    ;; test against latest
        ("gdb" ,gdb)
-       ("htslib" ,htslib)
-       ("pandoc" ,pandoc) ;; for generation man pages
+       ;; ("htslib" ,htslib)
+       ;; ("pandoc" ,pandoc) ;; for generation man pages
        ("perl" ,perl)
        ("python" ,python)
        ("ruby" ,ruby) ;; for generating man pages
        ; ("smithwaterman" ,smithwaterman)
        ("tabixpp" ,tabixpp)
+       ("bzip2-static" ,bzip2 "static")
+       ("xz-static" ,xz "static")
        ("xz" ,xz)
+       ("zlib-static" ,zlib "static")
        ("zlib" ,zlib)))
     (native-inputs
      `(("pkg-config" ,pkg-config)))

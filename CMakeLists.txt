@@ -6,12 +6,18 @@ set(CMAKE_CXX_STANDARD 17)
 include(ExternalProject)
 include(FeatureSummary)
 
+option(BUILD_SHARED_LIBS "Build with shared libs" OFF)
+# target_link_options(${target_name} PRIVATE "-static")
+# link_options("-static")
+set(CMAKE_EXE_LINKER_FLAGS "-static")
+SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+
 find_package(PkgConfig REQUIRED)
 
 include(FindBZip2)
 include(FindLibLZMA)
 include(FindZLIB)
-include(FindCURL) # for htslib
+# include(FindCURL) # for htslib
 
 feature_summary(
   FATAL_ON_MISSING_REQUIRED_PACKAGES
@@ -143,6 +149,7 @@ if (NOT tabixpp_FOUND)
     list(APPEND vcflib_SOURCE ${tabixpp_SOURCE})
 endif ()
 
+# Always build the static library
 add_library(vcflib STATIC
     ${vcflib_SOURCE}
     )
@@ -288,7 +295,7 @@ add_definitions(-DVERSION="${BUILD_NUMBER}")
 
 # ---- Build htslib
 #
-# Note by default we use the distributed htslib! These are
+# Note by default we use the distribution htslib! These are
 # the old instructions:
 
 if (HTSLIB_LOCAL)
@@ -297,26 +304,25 @@ if (HTSLIB_LOCAL)
 
   ExternalProject_Add(htslib-EXT
     SOURCE_DIR "${CMAKE_SOURCE_DIR}/${HTSLIB_LOCAL}"
+    BUILD_IN_SOURCE ON
     UPDATE_COMMAND ""
     CONFIGURE_COMMAND ""
+    # autoreconf -i && <SOURCE_DIR>/configure --disable-libcurl
     INSTALL_COMMAND ""
-    BUILD_IN_SOURCE ON
     BUILD_COMMAND $(MAKE) lib-static
   )
   ExternalProject_Get_property(htslib-EXT SOURCE_DIR)
   ExternalProject_Get_property(htslib-EXT INSTALL_DIR)
   set(htslib_INCLUDE "${SOURCE_DIR}")
-  set(htslib_static "${SOURCE_DIR}/libhts.a")
-  set(htslib_lib "${htslib_static}")
-  set(HTSLIB_LIBRARIES ${htslib_lib})
+  set(HTSLIB_LINK_LIBRARIES "${SOURCE_DIR}/libhts.a")
 
   add_custom_target(htslib
     DEPENDS htslib-EXT
     VERBATIM)
 
-  set_property(TARGET htslib PROPERTY
-    IMPORTED_LOCATION ${hstlib_lib})
-  add_dependencies(htslib htslib)
+  # set_property(TARGET htslib PROPERTY
+  #   IMPORTED_LOCATION ${hstlib_lib})
+  # add_dependencies(htslib htslib)
 
 # If the user wants to configure our HTSlib to build with libddeflate, we need
 # to make sure to link against libdeflate as a transitive dependency. To do
@@ -358,13 +364,14 @@ add_custom_target(wfa
 include_directories(${WFA_INCLUDE_DIRS})
 
 set(vcflib_DEPS
-  CURL::libcurl
+  # CURL::libcurl
   wfa
+  htslib
 )
 
 set(vcflib_LIBS
-  ${HTSLIB_LIBRARIES}
-  ${CURL_LIBRARIES}
+  ${HTSLIB_LINK_LIBRARIES}
+  # ${CURL_LIBRARIES}
   ${ZLIB_LIBRARIES}
   ${LIBLZMA_LIBRARIES}
   ${BZIP2_LIBRARIES}
