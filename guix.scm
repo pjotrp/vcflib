@@ -2,6 +2,10 @@
 ;;
 ;;   guix build -f guix.scm
 ;;
+;; Cross compile
+;;
+;;   guix build  --target=riscv64-linux-gnu  -f guix.scm
+;;
 ;; To get a development container (emacs shell will work)
 ;;
 ;;   guix shell -C -D -f guix.scm
