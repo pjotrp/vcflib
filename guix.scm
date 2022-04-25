@@ -67,18 +67,18 @@
     (inputs
      `(
        ;; ("curl" ,curl) for htslib
-       ("autoconf" ,autoconf) ;; for external htslib
-       ("automake" ,automake) ;; for external htslib
+       ;; ("autoconf" ,autoconf) ;; for external htslib
+       ;; ("automake" ,automake) ;; for external htslib
        ("fastahack" ,fastahack)
-       ("gcc" ,gcc-11)    ;; test against latest
+       ;; ("gcc" ,gcc-11)    ;; test against latest
        ("gdb" ,gdb)
        ;; ("htslib" ,htslib)
        ;; ("pandoc" ,pandoc) ;; for generation man pages
-       ("perl" ,perl)
+       ;; ("perl" ,perl)
        ("python" ,python)
-       ("ruby" ,ruby) ;; for generating man pages
+       ;; ("ruby" ,ruby) ;; for generating man pages
        ; ("smithwaterman" ,smithwaterman)
-       ("tabixpp" ,tabixpp)
+       ;; ("tabixpp" ,tabixpp)
        ("bzip2-static" ,bzip2 "static")
        ("xz-static" ,xz "static")
        ("xz" ,xz)
@@ -86,6 +86,8 @@
        ("zlib" ,zlib)))
     (native-inputs
      `(("pkg-config" ,pkg-config)))
+    (arguments
+     `(#:tests? #f))
     (home-page "https://github.com/vcflib/vcflib/")
     (synopsis "Library for parsing and manipulating VCF files")
     (description "Vcflib provides methods to manipulate and interpret

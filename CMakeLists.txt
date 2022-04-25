@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project(vcflib)
 
-set(CMAKE_CXX_STANDARD 17)
+# set(CMAKE_CXX_STANDARD 17)
 
 include(ExternalProject)
 include(FeatureSummary)
@@ -11,8 +11,9 @@ option(BUILD_SHARED_LIBS "Build with shared libs" OFF)
 # link_options("-static")
 set(CMAKE_EXE_LINKER_FLAGS "-static")
 SET(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+SET(CMAKE_SKIP_RPATH ON)
 
-find_package(PkgConfig REQUIRED)
+find_package(PkgConfig)
 
 include(FindBZip2)
 include(FindLibLZMA)
@@ -43,8 +44,8 @@ set_package_properties(ZLIB PROPERTIES TYPE REQUIRED)
 find_package(Threads)
 set_package_properties(Threads PROPERTIES TYPE REQUIRED)
 
-pkg_check_modules(HTSLIB htslib)   # Optionally builds from contrib/
-pkg_check_modules(TABIXPP tabixpp) # Optionally builds from contrib/
+# pkg_check_modules(HTSLIB htslib)   # Optionally builds from contrib/
+# pkg_check_modules(TABIXPP tabixpp) # Optionally builds from contrib/
 
 # ---- Build switches
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
@@ -419,11 +420,10 @@ function(add_pydoctest TEST_FILE)
       NAME ${TEST_FILE}
       COMMAND python3 -m doctest -o NORMALIZE_WHITESPACE -o REPORT_UDIFF pytest/${TEST_FILE}.md
       WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/test
-      # ENVIRONMENT suppressions=../test/libasan-suppress.txt
   )
-  SET_TESTS_PROPERTIES(${TEST_FILE}
+  # SET_TESTS_PROPERTIES(${TEST_FILE}
       # PROPERTIES ENVIRONMENT "ASAN_OPTIONS=detect_leaks=1:symbolize=1;LSAN_OPTIONS=verbosity=2:log_threads=1:suppressions=../test/libasan-suppress.txt")
-      PROPERTIES ENVIRONMENT "LSAN_OPTIONS=suppressions=../test/libasan-suppress.txt")
+      # PROPERTIES ENVIRONMENT "LSAN_OPTIONS=suppressions=../test/libasan-suppress.txt")
 endfunction()
 
 
