@@ -87,7 +87,16 @@
     (native-inputs
      `(("pkg-config" ,pkg-config)))
     (arguments
-     `(#:tests? #f))
+     `(#:configure-flags
+       (list ,@(if (%current-target-system)
+                   `((string-append
+                      "-DPKG_CONFIG_EXECUTABLE="
+                      (search-input-file
+                       %build-inputs
+                       (string-append "/bin/" ,(%current-target-system)
+                                      "-pkg-config"))))
+                   '()))
+       #:tests? #f))
     (home-page "https://github.com/vcflib/vcflib/")
     (synopsis "Library for parsing and manipulating VCF files")
     (description "Vcflib provides methods to manipulate and interpret
