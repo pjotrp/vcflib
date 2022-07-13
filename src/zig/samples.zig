@@ -5,8 +5,8 @@ const expectEqual = @import("std").testing.expectEqual;
 
 const hello = "Hello World from Zig";
 
-export fn hello_zig() [*]const u8 {
-    const result = hello;
+export fn hello_zig(msg: [*] const u8) [*]const u8 {
+    const result = msg;
     return result;
 }
 
@@ -25,7 +25,7 @@ fn split_genotypes(str: []const u8) *ArrayList([] const u8) {
 }
 
 test "hello zig" {
-    try expectEqual(hello_zig(),hello);
+    try expectEqual(hello_zig(hello),hello);
 }
 
 test "split genotypes" {
