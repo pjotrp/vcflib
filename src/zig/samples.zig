@@ -5,7 +5,7 @@ const expectEqual = @import("std").testing.expectEqual;
 
 const hello = "Hello World from Zig";
 
-fn hello_zig() [*c]const u8 {
+export fn hello_zig() [*]const u8 {
     const result = hello;
     return result;
 }

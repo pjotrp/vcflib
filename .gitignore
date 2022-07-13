@@ -127,3 +127,5 @@ build/
 *.log
 *.synctex.gz
 test/tests/main
+zig-cache
+zig-out
