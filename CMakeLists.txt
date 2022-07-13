@@ -125,7 +125,6 @@ file(GLOB INCLUDES
   filevercmp/*.h*)
 
 set(vcflib_SOURCE
-    src/genolib.cpp
     src/legacy.cpp
     src/Variant.cpp
     src/rnglib.cpp
