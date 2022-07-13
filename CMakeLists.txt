@@ -125,22 +125,14 @@ file(GLOB INCLUDES
   filevercmp/*.h*)
 
 set(vcflib_SOURCE
+    src/genolib.cpp
     src/legacy.cpp
-    src/Variant.h
-    src/split.h
-    src/pdflib.hpp
-    src/var.hpp
-    src/cdflib.hpp
-    src/rnglib.hpp
-    src/join.h
     src/Variant.cpp
     src/rnglib.cpp
     src/var.cpp
     src/pdflib.cpp
     src/cdflib.cpp
     src/split.cpp
-    src/ssw.hpp
-    src/ssw_cpp.hpp
     src/legacy.cpp
     src/rkmh.cpp
     src/murmur3.cpp
