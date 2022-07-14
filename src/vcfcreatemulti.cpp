@@ -13,6 +13,10 @@
 #include <sstream>
 #include <getopt.h>
 
+extern "C" {
+extern char *hello_zig(char *msg);
+}
+
 using namespace std;
 using namespace vcflib;
 
@@ -109,6 +113,9 @@ Variant createMultiallelic(vector<Variant>& vars) {
 int main(int argc, char** argv) {
 
     VariantCallFile variantFile;
+
+    string s = "Hello from C++";
+    printf("%s\n",hello_zig(s.data()));
 
     int c;
     while (true) {

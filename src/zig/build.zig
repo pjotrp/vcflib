@@ -7,6 +7,11 @@ pub fn build(b: *std.build.Builder) void {
 
     const lib = b.addStaticLibrary("zig", "samples.zig");
     lib.setBuildMode(mode);
+    switch (mode) {
+        .Debug, .ReleaseSafe => lib.bundle_compiler_rt = true,
+        .ReleaseFast, .ReleaseSmall => lib.disable_stack_probing = true,
+    }
+    lib.force_pic = true;
     lib.install();
 
     const main_tests = b.addTest("samples.zig");
