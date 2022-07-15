@@ -12,6 +12,7 @@ pub fn build(b: *std.build.Builder) void {
         .ReleaseFast, .ReleaseSmall => lib.disable_stack_probing = true,
     }
     lib.force_pic = true;
+    // lib.emit_h = true; future version of zig?
     lib.install();
 
     const main_tests = b.addTest("samples.zig");

@@ -129,3 +129,4 @@ build/
 test/tests/main
 zig-cache
 zig-out
+hello

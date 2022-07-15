@@ -14,7 +14,7 @@
 #include <getopt.h>
 
 extern "C" {
-extern char *hello_zig(char *msg);
+    extern char *hello_zig(char *msg);
 }
 
 using namespace std;
