@@ -25,7 +25,9 @@ export fn zig_process_vector(vsize: u64, v: [*][*] const u8) void {
 
 export fn zig_process_opaque_ptr(variant: [*] const u8) void {
     call_c(variant);
-    p("{c}\n",.{get_name(variant)[0]});
+    const c_str = get_name(variant);
+    const s = @ptrCast([*c]const u8, c_str);
+    p("And yes, we are back in zig: {s}\n\n",.{s});
 }
 
 fn split_genotypes(str: []const u8) *ArrayList([] const u8) {
