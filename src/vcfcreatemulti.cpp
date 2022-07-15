@@ -13,10 +13,6 @@
 #include <sstream>
 #include <getopt.h>
 
-extern "C" {
-    extern char *hello_zig(char *msg);
-}
-
 using namespace std;
 using namespace vcflib;
 
@@ -33,7 +29,7 @@ Usage: vcfcreatemulti [options] [file]
 
 Go through sorted VCF and if overlapping alleles are represented
 across multiple records, merge them into a single record.  Currently
-only for indels.
+only for indels. See also vcfposmerge for a new implementation.
 
 Type: transformation
 )";
@@ -113,9 +109,6 @@ Variant createMultiallelic(vector<Variant>& vars) {
 int main(int argc, char** argv) {
 
     VariantCallFile variantFile;
-
-    string s = "Hello from C++";
-    printf("%s\n",hello_zig(s.data()));
 
     int c;
     while (true) {

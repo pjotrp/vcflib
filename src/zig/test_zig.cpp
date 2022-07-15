@@ -6,9 +6,24 @@
 extern "C" {
     extern const char *hello_zig(const char *msg);
     extern void zig_process_vector(long vsize, const char **v);
+    extern void zig_process_opaque_ptr(void *test);
+    extern void call_c(void *test);
 }
 
 using namespace std;
+
+class Variant {
+public:
+    string name;
+    long position;
+    Variant(string n, long p) { name = n; position = p; };
+    string get_name() { return name; };
+    long get_position() { return position; } ;
+};
+
+void call_c(void *test) {
+    cout << "BACK IN C++" << endl;
+}
 
 int main(int argc, char **argv) {
     string s = "Hello from C++";
@@ -29,5 +44,9 @@ int main(int argc, char **argv) {
     }
     zig_process_vector(list.size(),list.data());
 
+    auto v = Variant("varname",4555);
+    cout << v.get_name() << ":" << v.get_position() << endl;
+
+    zig_process_opaque_ptr(&v);
     return 0;
 }

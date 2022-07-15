@@ -6,6 +6,8 @@ const p = @import("std").debug.print;
 
 const hello = "Hello World from Zig";
 
+extern fn call_c([*] const u8) void;
+
 export fn hello_zig(msg: [*] const u8) [*]const u8 {
     const result = msg;
     return result;
@@ -18,6 +20,11 @@ export fn zig_process_vector(vsize: u64, v: [*][*] const u8) void {
     const s2 = v[1][2];
     p("HELLO! {any} {any} {any} {c}:{c}:{c}\n",.{vsize, &v[0], &v[1], s,s1,s2}); // expect 1 and dot
     // std.testing.expectEqual(&s, "1/0") catch unreachable;
+}
+
+export fn zig_process_opaque_ptr(variant: [*] const u8) void {
+    _ = variant;
+    call_c(variant);
 }
 
 fn split_genotypes(str: []const u8) *ArrayList([] const u8) {
