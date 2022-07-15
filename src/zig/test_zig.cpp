@@ -8,6 +8,7 @@ extern "C" {
     extern void zig_process_vector(long vsize, const char **v);
     extern void zig_process_opaque_ptr(void *test);
     extern void call_c(void *test);
+    extern const char *get_name(void *test);
 }
 
 using namespace std;
@@ -22,7 +23,16 @@ public:
 };
 
 void call_c(void *test) {
-    cout << "BACK IN C++" << endl;
+    auto v = static_cast<Variant*>(test);
+
+    cout << "BACK IN C++ " << v->name << endl;
+}
+
+const char *get_name(void *variant) {
+    auto v = static_cast<Variant*>(variant);
+
+    cout << "BACK IN C++ getname " << v->name << endl;
+    return (v->name.data());
 }
 
 int main(int argc, char **argv) {

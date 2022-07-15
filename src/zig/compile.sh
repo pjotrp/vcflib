@@ -7,4 +7,4 @@ exit $?
 # C example:
 zig cc -o hello test_zig.c zig-out/lib/libzig.a
 ./hello
-zig c++ -o hello test_zig.cpp zig-out/lib/libzig.a
+zig c++ -g -o hello test_zig.cpp zig-out/lib/libzig.a

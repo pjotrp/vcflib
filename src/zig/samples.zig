@@ -7,6 +7,7 @@ const p = @import("std").debug.print;
 const hello = "Hello World from Zig";
 
 extern fn call_c([*] const u8) void;
+extern fn get_name([*] const u8) [*] const u8;
 
 export fn hello_zig(msg: [*] const u8) [*]const u8 {
     const result = msg;
@@ -23,8 +24,8 @@ export fn zig_process_vector(vsize: u64, v: [*][*] const u8) void {
 }
 
 export fn zig_process_opaque_ptr(variant: [*] const u8) void {
-    _ = variant;
     call_c(variant);
+    p("{c}\n",.{get_name(variant)[0]});
 }
 
 fn split_genotypes(str: []const u8) *ArrayList([] const u8) {
