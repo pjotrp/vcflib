@@ -17,14 +17,6 @@ using namespace std;
 using namespace vcflib;
 
 
-/*
-  double convertStrDbl(const string& s) {
-    double r;
-    convert(s, r);
-    return r;
-}
-*/
-
 void printSummary(char** argv) {
     cerr << R"(
 Usage: vcfcreatemulti [options] [file]
@@ -61,8 +53,6 @@ Variant createMultiallelic(vector<Variant>& vars) {
     string ref = first.ref;
 
     for (vector<Variant>::iterator v = vars.begin() + 1; v != vars.end(); ++v) {
-        // for (auto v: vars) {
-        //   if (v == first) continue;
         int sdiff = (v->position + v->ref.size()) - (start + ref.size());
         int pdiff = (start + ref.size()) - v->position;
         if (sdiff > 0) {
@@ -70,42 +60,41 @@ Variant createMultiallelic(vector<Variant>& vars) {
         }
     }
 
-    Variant var = vars.front();
-    var.alt.clear();
-    var.ref = ref;
+    Variant mvar = first;
+    mvar.alt.clear();
+    mvar.ref = ref;
 
     for (vector<Variant>::iterator v = vars.begin(); v != vars.end(); ++v) {
         // add alternates and splice them into the reference
-        int p5diff = v->position - var.position;
-        int p3diff = (var.position + var.ref.size()) - (v->position + v->ref.size());
+        int p5diff = v->position - mvar.position;
+        int p3diff = (mvar.position + mvar.ref.size()) - (v->position + v->ref.size());
         string before;
         string after;
         if (p5diff > 0) {
-            before = var.ref.substr(0, p5diff);
+            before = mvar.ref.substr(0, p5diff);
         }
-        if (p3diff > 0 && p3diff < var.ref.size()) {
-            after = var.ref.substr(var.ref.size() - p3diff);
+        if (p3diff > 0 && p3diff < mvar.ref.size()) {
+            after = mvar.ref.substr(mvar.ref.size() - p3diff);
         }
         if (p5diff || p3diff) {
             for (vector<string>::iterator a = v->alt.begin(); a != v->alt.end(); ++a) {
-                var.alt.push_back(before);
-                string& alt = var.alt.back();
+                mvar.alt.push_back(before);
+                string& alt = mvar.alt.back();
                 alt.append(*a);
                 alt.append(after);
             }
         } else {
             for (vector<string>::iterator a = v->alt.begin(); a != v->alt.end(); ++a) {
-                var.alt.push_back(*a);
+                mvar.alt.push_back(*a);
             }
         }
     }
 
     stringstream s;
     s << vars.front().position << "-" << vars.back().position;
-    var.info["combined"].push_back(s.str());
+    mvar.info["combined"].push_back(s.str());
 
-    return var;
-
+    return mvar;
 }
 
 int main(int argc, char** argv) {
@@ -177,10 +166,11 @@ int main(int argc, char** argv) {
         } else {
             // compute maxpos as the most right position in the current reference window. Note
             // that the window may get expanded at every step.
-            int maxpos = vars.front().position + vars.front().ref.size();
-            for (vector<Variant>::iterator v = vars.begin(); v != vars.end(); ++v) {
-                if (maxpos < v->position + v->ref.size()) {
-                    maxpos = v->position + v->ref.size();
+            auto first = vars.front();
+            auto maxpos = first.position + first.ref.size();
+            for (auto v: vars) {
+                if (maxpos < v.position + v.ref.size()) {
+                    maxpos = v.position + v.ref.size();
                 }
             }
             if (var.sequenceName != lastSeqName) {
@@ -201,7 +191,6 @@ int main(int argc, char** argv) {
                 vars.push_back(var);
             }
         }
-
     }
 
     if (!vars.empty()) {
