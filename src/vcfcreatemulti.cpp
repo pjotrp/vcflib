@@ -17,11 +17,13 @@ using namespace std;
 using namespace vcflib;
 
 
-double convertStrDbl(const string& s) {
+/*
+  double convertStrDbl(const string& s) {
     double r;
     convert(s, r);
     return r;
 }
+*/
 
 void printSummary(char** argv) {
     cerr << R"(
@@ -169,10 +171,12 @@ int main(int argc, char** argv) {
             lastSeqName = var.sequenceName;
         }
 
-        if (vars.empty()) { // track list of alt alleles
+        if (vars.empty()) { // track list of variants in window (alt alleles)
             vars.push_back(var);
             continue;
         } else {
+            // compute maxpos as the most right position in the current reference window. Note
+            // that the window may get expanded at every step.
             int maxpos = vars.front().position + vars.front().ref.size();
             for (vector<Variant>::iterator v = vars.begin(); v != vars.end(); ++v) {
                 if (maxpos < v->position + v->ref.size()) {
@@ -180,14 +184,17 @@ int main(int argc, char** argv) {
                 }
             }
             if (var.sequenceName != lastSeqName) {
+                // next chromosome, contig or whatever
                 Variant result = createMultiallelic(vars);
                 cout << result << endl;
                 vars.clear();
                 lastSeqName = var.sequenceName;
                 vars.push_back(var);
             } else if (var.position < maxpos) {
+                // As long as it is in window add it to the list
                 vars.push_back(var);
             } else {
+                // Next variant is out of window, so create single line variant
                 Variant result = createMultiallelic(vars);
                 cout << result << endl;
                 vars.clear();
