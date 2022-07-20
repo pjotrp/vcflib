@@ -125,6 +125,7 @@ file(GLOB INCLUDES
   filevercmp/*.h*)
 
 set(vcflib_SOURCE
+    src/vcf-c-api.cpp
     src/legacy.cpp
     src/Variant.cpp
     src/rnglib.cpp

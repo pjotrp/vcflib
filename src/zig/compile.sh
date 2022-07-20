@@ -1,6 +1,6 @@
 #!/bin/sh
 
-zig build test
+# zig build test
 zig build # creates library in zig-out
 exit $?
 

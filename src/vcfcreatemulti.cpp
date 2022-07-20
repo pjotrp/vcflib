@@ -8,7 +8,8 @@
 */
 
 #include "Variant.h"
-#include "convert.h"
+// #include "convert.h"
+#include "vcf-c-api.h"
 #include <set>
 #include <sstream>
 #include <getopt.h>
@@ -154,7 +155,15 @@ int main(int argc, char** argv) {
     string lastSeqName;
     vector<Variant> vars;
 
+    cout << "Calling into Zig" << endl;
+    // auto var_window = zig_variant_window();
+    string s = "Hello from C++";
+    printf("%s\n",hello_zig2(s.data()));
+    exit(1);
+
     while (variantFile.getNextVariant(var)) {
+
+        auto var2 = zig_variant(&var);
 
         if (lastSeqName.empty()) { // track the previous sequence name
             lastSeqName = var.sequenceName;
