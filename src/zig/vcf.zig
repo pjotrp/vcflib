@@ -56,40 +56,44 @@ pub fn VarWindowX(comptime T: type) type {
 }
 
 // const MyVarWindow2 = VarWindow(u64);
+const test_allocator = std.testing.allocator;
 const MyVarWindow = ArrayList(u64);
+var win = MyVarWindow.init(test_allocator);
 
 // Return a pointer to the Variant window class
 // void *zig_variant_window();
 export fn zig_variant_window() * MyVarWindow {
 
-    const test_allocator = std.testing.allocator;
     // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // defer std.debug.assert(!gpa.deinit());
 
     // var hello2 = MyVarWindow.init(gpa.allocator());
+    // var hello2 = MyVarWindow.init(test_allocator);
     var hello2 = MyVarWindow.init(test_allocator);
     // hello2.push(12) catch unreachable;
     return &hello2;
 }
 
-export fn zig_variant_window_cleanup(win: *MyVarWindow) void {
-    _ = win;
+export fn zig_variant_window_cleanup(win2: *MyVarWindow) void {
+    _ = win2;
+    p("DONE {}",.{win_size()});
 }
 
-export fn win_push(win: *MyVarWindow, vcfvar: * anyopaque) void {
-    const test_allocator = std.testing.allocator;
+var hello3 = ArrayList(u64).init(test_allocator);
+
+export fn win_push(win2: *MyVarWindow, vcfvar: * anyopaque) void {
+    // const test_allocator = std.testing.allocator;
     const ptr: u64 = @ptrToInt(vcfvar);
     _ = ptr;
-    _ = win;
-    var hello3 = ArrayList(u64).init(test_allocator);
+    _ = win2;
     p("BEFORE",.{});
-    hello3.append(20) catch |err| {
+    win.append(20) catch |err| {
                 std.debug.print("out of memory {e}\n", .{err});
             };
     p("AFTER",.{});
 }
 
-export fn win_size(win: *MyVarWindow) usize {
+export fn win_size() usize {
     return win.items.len;
 }
 
