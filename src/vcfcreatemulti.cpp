@@ -156,11 +156,9 @@ int main(int argc, char** argv) {
     vector<Variant> vars;
 
     cout << "Calling into Zig" << endl;
-    string s = "Hello from C++";
-    printf("%s\n",hello_zig2(s.data()));
     auto var_window = zig_variant_window();
-    printf("%s\n",(char *)var_window);
-    exit(1);
+    string s = "Hello from C++";
+    printf("%s <%i>\n",hello_zig2(s.data()),win_size(var_window));
 
     while (variantFile.getNextVariant(var)) {
 

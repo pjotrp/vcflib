@@ -391,6 +391,7 @@ ExternalProject_Add(ZIG-EXT
     CONFIGURE_COMMAND ""
     INSTALL_COMMAND ""
     BUILD_IN_SOURCE ON
+    BUILD_ALWAYS ON
     BUILD_COMMAND ${CMAKE_SOURCE_DIR}/src/zig/compile.sh
 )
 ExternalProject_Get_property(ZIG-EXT SOURCE_DIR)
