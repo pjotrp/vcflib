@@ -57,15 +57,14 @@ const MyVarWindow = VarWindow(i32);
 
 // Return a pointer to the Variant window class
 // void *zig_variant_window();
-export fn zig_variant_window() * anyopaque {
+export fn zig_variant_window() * MyVarWindow {
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // defer std.debug.assert(!gpa.deinit());
 
     var hello2 = MyVarWindow.init(gpa.allocator());
     hello2.push(12) catch unreachable;
-    var ptr = &hello2;
-    return @ptrCast(*anyopaque, ptr);
+    return &hello2;
 }
 
 export fn win_size(ptr: *MyVarWindow) usize {
