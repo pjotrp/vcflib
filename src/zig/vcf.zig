@@ -13,7 +13,7 @@ export fn hello_zig2(msg: [*] const u8) [*]const u8 {
     return result;
 }
 
-pub fn VarWindow(comptime T: type) type {
+pub fn VarWindowX(comptime T: type) type {
 
     return struct {
         stack: ArrayList(T),
@@ -28,8 +28,10 @@ pub fn VarWindow(comptime T: type) type {
             self.stack.deinit();
         }
 
-        pub fn push(self: *Self, val: T) !void {
-            try self.stack.append(val);
+        pub fn push(self: *Self, value: T) !void {
+            p("HELLO",.{});
+            try self.stack.append(value);
+            p("HELLOEXIT",.{});
         }
 
         pub fn pop(self: *Self) ?T {
@@ -53,22 +55,42 @@ pub fn VarWindow(comptime T: type) type {
     };
 }
 
-const MyVarWindow = VarWindow(i32);
+// const MyVarWindow2 = VarWindow(u64);
+const MyVarWindow = ArrayList(u64);
 
 // Return a pointer to the Variant window class
 // void *zig_variant_window();
 export fn zig_variant_window() * MyVarWindow {
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const test_allocator = std.testing.allocator;
+    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     // defer std.debug.assert(!gpa.deinit());
 
-    var hello2 = MyVarWindow.init(gpa.allocator());
-    hello2.push(12) catch unreachable;
+    // var hello2 = MyVarWindow.init(gpa.allocator());
+    var hello2 = MyVarWindow.init(test_allocator);
+    // hello2.push(12) catch unreachable;
     return &hello2;
 }
 
-export fn win_size(ptr: *MyVarWindow) usize {
-    return ptr.count();
+export fn zig_variant_window_cleanup(win: *MyVarWindow) void {
+    _ = win;
+}
+
+export fn win_push(win: *MyVarWindow, vcfvar: * anyopaque) void {
+    const test_allocator = std.testing.allocator;
+    const ptr: u64 = @ptrToInt(vcfvar);
+    _ = ptr;
+    _ = win;
+    var hello3 = ArrayList(u64).init(test_allocator);
+    p("BEFORE",.{});
+    hello3.append(20) catch |err| {
+                std.debug.print("out of memory {e}\n", .{err});
+            };
+    p("AFTER",.{});
+}
+
+export fn win_size(win: *MyVarWindow) usize {
+    return win.items.len;
 }
 
 test "hello zig" {
