@@ -157,19 +157,8 @@ int main(int argc, char** argv) {
 
     cout << "Calling into Zig" << endl;
     auto var_window = zig_variant_window();
-    printf("%p\n",&var);
-    win_push(var_window,&var);
-    // printf("%p\n",&var);
-    win_push(var_window,&var);
-    string s = "Hello from C++";
-    // printf("%s <%i>\n",hello_zig2(s.data()),win_size(var_window));
 
     while (variantFile.getNextVariant(var)) {
-
-        // auto var2 = zig_variant(&var);
-        // printf("%p\n",&var);
-        win_push(var_window,&var);
-        // printf("%s <%i>\n",hello_zig2(s.data()),win_size(var_window));
 
         if (lastSeqName.empty()) { // track the previous sequence name
             lastSeqName = var.sequenceName;
@@ -177,6 +166,8 @@ int main(int argc, char** argv) {
 
         if (vars.empty()) { // track list of variants in window (alt alleles)
             vars.push_back(var);
+            Variant *copy2 = &vars.back();
+            win_push(var_window,copy2);
             continue;
         } else {
             // compute maxpos as the most right position in the current reference window. Note
@@ -195,15 +186,21 @@ int main(int argc, char** argv) {
                 vars.clear();
                 lastSeqName = var.sequenceName;
                 vars.push_back(var);
+                Variant *copy2 = &vars.back();
+                win_push(var_window,copy2);
             } else if (var.position < maxpos) {
                 // As long as it is in window add it to the list
                 vars.push_back(var);
+                Variant *copy2 = &vars.back();
+                win_push(var_window,copy2);
             } else {
                 // Next variant is out of window, so create single line variant
                 Variant result = createMultiallelic(vars);
                 cout << result << endl;
                 vars.clear();
                 vars.push_back(var);
+                Variant *copy2 = &vars.back();
+                win_push(var_window,copy2);
             }
         }
     }

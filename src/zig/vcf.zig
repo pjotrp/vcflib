@@ -58,7 +58,7 @@ pub fn VarWindowX(comptime T: type) type {
 }
 
 const test_allocator = std.testing.allocator;
-const MyVarWindow = ArrayList(u64);
+const MyVarWindow = ArrayList(* anyopaque);
 var win = MyVarWindow.init(test_allocator);
 
 // Return a pointer to the Variant window class
@@ -74,11 +74,12 @@ export fn zig_variant_window_cleanup(win2: *MyVarWindow) void {
 
 export fn win_push(win2: *MyVarWindow, vcfvar: *anyopaque) void {
     var ptr = @ptrToInt(vcfvar);
+    _ = ptr;
     // var w: * MyVarWindow = @ptrCast(*MyVarWindow, @alignCast(@alignOf(*MyVarWindow), win2));
     var w = win2;
     p("BEFORE:",.{});
     p("use {p}\n",.{w});
-    w.append(ptr) catch |err| {
+    w.append(vcfvar) catch |err| {
                 std.debug.print("out of memory {e}\n", .{err});
             };
     p("AFTER\n",.{});
