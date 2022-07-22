@@ -57,7 +57,6 @@ pub fn VarWindowX(comptime T: type) type {
     };
 }
 
-// const MyVarWindow2 = VarWindow(u64);
 const test_allocator = std.testing.allocator;
 const MyVarWindow = ArrayList(u64);
 var win = MyVarWindow.init(test_allocator);
@@ -65,15 +64,7 @@ var win = MyVarWindow.init(test_allocator);
 // Return a pointer to the Variant window class
 // void *zig_variant_window();
 export fn zig_variant_window() * anyopaque {
-
-    // var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    // defer std.debug.assert(!gpa.deinit());
-
-    // var hello2 = MyVarWindow.init(gpa.allocator());
-    var hello2 = MyVarWindow.init(test_allocator);
-    hello2.append(10) catch unreachable;
-    p("init {p}\n",.{&hello2});
-    return &hello2;
+    return &win;
 }
 
 export fn zig_variant_window_cleanup(win2: *MyVarWindow) void {
@@ -81,21 +72,16 @@ export fn zig_variant_window_cleanup(win2: *MyVarWindow) void {
     p("DONE {}\n",.{win_size()});
 }
 
-var hello3 = ArrayList(u64).init(test_allocator);
-
-export fn win_push(win2: *anyopaque, vcfvar: *anyopaque) void {
-    // const test_allocator = std.testing.allocator;
-    const ptr: u64 = @ptrToInt(vcfvar);
-    _ = ptr;
-    // _ = win2;
-    var w: * MyVarWindow = @ptrCast(*MyVarWindow, @alignCast(@alignOf(*MyVarWindow), win2));
-    // const args_ptr = @ptrCast(*Args, @alignCast(@alignOf(Args), raw_arg));
-    p("BEFORE",.{});
+export fn win_push(win2: *MyVarWindow, vcfvar: *anyopaque) void {
+    var ptr = @ptrToInt(vcfvar);
+    // var w: * MyVarWindow = @ptrCast(*MyVarWindow, @alignCast(@alignOf(*MyVarWindow), win2));
+    var w = win2;
+    p("BEFORE:",.{});
     p("use {p}\n",.{w});
-    w.append(20) catch |err| {
+    w.append(ptr) catch |err| {
                 std.debug.print("out of memory {e}\n", .{err});
             };
-    p("AFTER",.{});
+    p("AFTER\n",.{});
 }
 
 export fn win_size() usize {
