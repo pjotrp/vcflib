@@ -8,7 +8,6 @@
 */
 
 #include "Variant.h"
-// #include "convert.h"
 #include "vcf-c-api.h"
 #include <set>
 #include <sstream>
@@ -37,8 +36,12 @@ Variant createMultiallelic(vector<Variant>& vars) {
         return vars.front();
     }
 
+    Variant first = vars.front();
+    Variant nvar = first;
+
+    Variant *ret = (Variant *)zig_create_multi_allelic(&nvar, &vars);
+
     // set maxpos to the most outward allele position + its reference size
-    auto first = vars.front();
     auto maxpos = first.position + first.ref.size();
     for (auto v: vars) {
         if (maxpos < v.position + v.ref.size()) {
@@ -155,7 +158,7 @@ int main(int argc, char** argv) {
     string lastSeqName;
     vector<Variant> vars;
 
-    cout << "Calling into Zig" << endl;
+    // cout << "Calling into Zig" << endl;
     auto var_window = zig_variant_window();
 
     while (variantFile.getNextVariant(var)) {

@@ -1,5 +1,5 @@
 const std = @import("std");
-const variant = @import("variant");
+// const variant = @import("variant");
 const samples = @import("samples");
 const expectEqual = @import("std").testing.expectEqual;
 const ArrayList = std.ArrayList;
@@ -9,6 +9,10 @@ const p = @import("std").debug.print;
 const hello = "Hello World from Zig";
 
 // const Variant = @OpaqueType();
+
+// C++ accessors for Variant object
+extern fn get_id(* anyopaque) [*c] const u8;
+extern fn testme() void;
 
 export fn hello_zig2(msg: [*] const u8) [*]const u8 {
     const result = msg;
@@ -69,7 +73,7 @@ export fn zig_variant_window() * anyopaque {
 
 export fn zig_variant_window_cleanup(win2: *MyVarWindow) void {
     _ = win2;
-    p("DONE {}\n",.{win_size()});
+    // p("DONE {}\n",.{win_size()});
 }
 
 export fn win_push(win2: *MyVarWindow, vcfvar: *anyopaque) void {
@@ -77,16 +81,25 @@ export fn win_push(win2: *MyVarWindow, vcfvar: *anyopaque) void {
     _ = ptr;
     // var w: * MyVarWindow = @ptrCast(*MyVarWindow, @alignCast(@alignOf(*MyVarWindow), win2));
     var w = win2;
-    p("BEFORE:",.{});
-    p("use {p}\n",.{w});
+    // p("BEFORE:",.{});
+    // p("use {p}\n",.{w});
     w.append(vcfvar) catch |err| {
                 std.debug.print("out of memory {e}\n", .{err});
             };
-    p("AFTER\n",.{});
+    // p("AFTER\n",.{});
 }
 
 export fn win_size() usize {
     return win.items.len;
+}
+
+export fn zig_create_multi_allelic(variant: * anyopaque, varlist: * anyopaque) * anyopaque {
+    _ = varlist;
+    testme();
+    const c_str = get_id(variant);
+    const s = @ptrCast([*c]const u8, c_str);
+    p("And yes, we are back in zig: {s}\n\n",.{s});
+    return variant;
 }
 
 test "hello zig" {
