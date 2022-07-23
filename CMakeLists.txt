@@ -364,6 +364,7 @@ ExternalProject_Add(wfa-EXT
     CONFIGURE_COMMAND ""
     INSTALL_COMMAND ""
     BUILD_IN_SOURCE ON
+    BUILD_ALWAYS ON
     BUILD_COMMAND $(MAKE) ${wfa_MAKE_ARGS}
 )
 ExternalProject_Get_property(wfa-EXT SOURCE_DIR)
@@ -397,23 +398,23 @@ ExternalProject_Add(ZIG-EXT
 ExternalProject_Get_property(ZIG-EXT SOURCE_DIR)
 set(ZIG_INCLUDE_DIRS ${SOURCE_DIR})
 set(ZIG_LINK_LIBRARIES ${SOURCE_DIR}/zig-out/lib/libzig.a)
-link_directories($SOURCE_DIR}/lib)
-MESSAGE(STATUS ${ZIG_LINK_LIBRARIES})
+# link_directories($SOURCE_DIR}/lib)
+# MESSAGE(STATUS ${ZIG_LINK_LIBRARIES})
 
 add_library(ZIGCPP_STATIC_LIB STATIC IMPORTED)
 set_target_properties(ZIGCPP_STATIC_LIB PROPERTIES IMPORTED_LOCATION ${ZIG_LINK_LIBRARIES})
 add_dependencies(ZIGCPP_STATIC_LIB ZIG-EXT vcf.zig)
 
-add_custom_target(ZIGLIB
-    DEPENDS ZIG-EXT
-    VERBATIM)
+# add_custom_target(ZIGLIB
+#     DEPENDS ZIG-EXT
+#     VERBATIM)
 
 include_directories(${ZIG_INCLUDE_DIRS})
 
 set(vcflib_DEPS
+  # ZIGLIB
   CURL::libcurl
   wfa
-  ZIGLIB
 )
 
 if (HTSLIB_LOCAL)
@@ -433,7 +434,7 @@ set(vcflib_LIBS
   ${ZIG_LINK_LIBRARIES}
 )
 
-target_link_libraries(vcflib PUBLIC ${vcflib_LIBS})
+# target_link_libraries(vcflib PUBLIC ${vcflib_LIBS})
 add_dependencies(vcflib ${vcflib_DEPS})
 
 # ---- Build all
@@ -442,7 +443,7 @@ if (NOT BUILD_ONLY_LIB)
   foreach(BIN ${BINS})
     add_executable(${BIN} src/${BIN}.cpp)
     add_dependencies(${BIN} vcflib)
-    target_link_libraries(${BIN} PUBLIC vcflib ${vcflib_LIBS} ${ZIG_LINK_LIBRARIES})
+    target_link_libraries(${BIN} PUBLIC ${vcflib_LIBS} vcflib)
   endforeach(BIN ${BINS})
   install(TARGETS ${BINS} RUNTIME DESTINATION bin)
 
