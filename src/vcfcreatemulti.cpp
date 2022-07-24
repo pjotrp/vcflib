@@ -45,12 +45,29 @@ Variant createMultiallelic(vector<Variant>& vars) {
     Variant *data = vars.data();
     void *test = &data;
     printf("p:%p\n",&data);
+    printf("p:%p\n",data);
+    printf("&0:%p\n",&data[0]);
     printf("0:%p\n",data[0]);
     printf("1:%p\n",data[1]);
+    printf("&1:%p\n",&data[1]);
+    printf("2:%p\n",data[2]);
     printf("t:%p\n",test);
     void **t2 = (void**)test;
-    printf("t:%p\n",t2);
-    Variant *ret = (Variant *)zig_create_multi_allelic(&nvar, t2 , vars.size());
+    printf("t2:%p\n",t2);
+    printf("*t2:%p\n",*t2);
+    printf("0:%p\n",t2[0]);
+    printf("1:%p\n",t2[1]);
+    printf("2:%p\n",t2[2]);
+    // Variant *ret = (Variant *)zig_create_multi_allelic(&nvar, t2 , vars.size());
+
+    int i = 0;
+    vector<void *> ptrs;
+    for (auto v: vars) {
+        void *p = &data[i];
+        ptrs.push_back(p);
+        i++;
+    }
+    Variant *ret = (Variant *)zig_create_multi_allelic(&nvar, ptrs.data() , vars.size());
 
     // set maxpos to the most outward allele position + its reference size
     auto maxpos = first.position + first.ref.size();

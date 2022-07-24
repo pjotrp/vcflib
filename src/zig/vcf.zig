@@ -97,11 +97,23 @@ export fn win_size() usize {
 
 // pub extern fn zig_create_multi_allelic(retvar: ?*anyopaque, varlist: [*c]?*anyopaque, size: c_long) ?*anyopaque;
 
-export fn zig_create_multi_allelic(variant: *anyopaque, varlist: [*c]?*anyopaque, size: c_long) ?*anyopaque {
+export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaque, size: c_long) ?*anyopaque {
     _ = varlist;
-    const c_str = get_id(variant);
+    const c_str = get_id(variant.?);
     const s = @ptrCast([*c]const u8, c_str);
     p("And yes, we are back in zig: {s} -- {}\n\n",.{s,size});
+
+    p("ptr={*}\n",.{varlist}); // correct!
+    p("p0={*}\n",.{varlist.*});
+    p("p0={*}\n",.{varlist[0]});
+    p("p1={*}\n",.{varlist[1]});
+    p("p2={*}\n",.{varlist[2]});
+    const p2 = @ptrCast(* anyopaque, varlist[1]);
+    const s2 = get_id(p2);
+    p("id={s}\n",.{s2});
+    const p3 = @ptrCast(* anyopaque, varlist[3]);
+    const s3 = get_id(p3);
+    p("id={s}\n",.{s3});
 
     // var x = @intToPtr(*anyopaque,varlist[0]);
     // var x1 = @intToPtr(*anyopaque,varlist[0]);
