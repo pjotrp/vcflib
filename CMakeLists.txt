@@ -412,7 +412,7 @@ add_dependencies(ZIGCPP_STATIC_LIB ZIG-EXT vcf.zig)
 include_directories(${ZIG_INCLUDE_DIRS})
 
 set(vcflib_DEPS
-  # ZIGLIB
+  ZIG-EXT
   CURL::libcurl
   wfa
 )

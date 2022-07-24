@@ -8,7 +8,9 @@
 */
 
 #include "Variant.h"
+extern "C" {
 #include "vcf-c-api.h"
+}
 #include <set>
 #include <sstream>
 #include <getopt.h>
@@ -16,6 +18,7 @@
 using namespace std;
 using namespace vcflib;
 
+// extern "C" void *zig_create_multi_allelic(Variant *retvar, Variant *varlist[], long size);
 
 void printSummary(char** argv) {
     cerr << R"(
@@ -39,7 +42,15 @@ Variant createMultiallelic(vector<Variant>& vars) {
     Variant first = vars.front();
     Variant nvar = first;
 
-    Variant *ret = (Variant *)zig_create_multi_allelic(&nvar, &vars);
+    Variant *data = vars.data();
+    void *test = &data;
+    printf("p:%p\n",&data);
+    printf("0:%p\n",data[0]);
+    printf("1:%p\n",data[1]);
+    printf("t:%p\n",test);
+    void **t2 = (void**)test;
+    printf("t:%p\n",t2);
+    Variant *ret = (Variant *)zig_create_multi_allelic(&nvar, t2 , vars.size());
 
     // set maxpos to the most outward allele position + its reference size
     auto maxpos = first.position + first.ref.size();
