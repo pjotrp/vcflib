@@ -23,6 +23,7 @@ export fn hello_zig2(msg: [*] const u8) [*]const u8 {
     return result;
 }
 
+
 pub fn VarWindowX(comptime T: type) type {
 
     return struct {
@@ -97,8 +98,22 @@ export fn win_size() usize {
     return win.items.len;
 }
 
-// export fn zig_create_multi_allelic(variant: * anyopaque, varlist:  ** u64, size: u64) callconv(.C) * anyopaque {
 
+const Variant = struct {
+    v: *anyopaque,
+
+    const Self = @This();
+
+    // pub fn id(self: *Self) []u8 {
+    // }
+
+    pub fn pos(self: *Self) u64 {
+        return var_pos(self.v);
+    }
+
+};
+
+// by @Cimport:
 // pub extern fn zig_create_multi_allelic(retvar: ?*anyopaque, varlist: [*c]?*anyopaque, size: c_long) ?*anyopaque;
 
 export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaque, size: usize) ?*anyopaque {
@@ -109,7 +124,9 @@ export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaq
 
     const p3 = @ptrCast(* anyopaque, varlist[3]);
     const s3 = var_id(p3);
-    p("id={s}\n",.{s3});
+    var v = Variant{.v = varlist[3].?};
+    p("id={s} pos={d}\n",.{s3,v.pos()});
+
 
     const as_slice: [:0]const u8 = std.mem.span(s3); // makes 0 terminated slice (sentinel value is zero byte)
     std.testing.expectEqualStrings(as_slice, ">3655>3662_4") catch |err| {
