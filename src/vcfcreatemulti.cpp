@@ -60,12 +60,9 @@ Variant createMultiallelic(vector<Variant>& vars) {
     printf("2:%p\n",t2[2]);
     // Variant *ret = (Variant *)zig_create_multi_allelic(&nvar, t2 , vars.size());
 
-    int i = 0;
     vector<void *> ptrs;
     for (auto &v: vars) {
-        void *p = &data[i];
-        ptrs.push_back(p);
-        i++;
+        ptrs.push_back(&v);
     }
     Variant *ret = (Variant *)zig_create_multi_allelic(&nvar, ptrs.data() , vars.size());
 
