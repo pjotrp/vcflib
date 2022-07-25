@@ -1,7 +1,9 @@
 const std = @import("std");
 // const variant = @import("variant");
+const mem = @import("std").mem;
 const samples = @import("samples");
 const expectEqual = @import("std").testing.expectEqual;
+const expect = @import("std").testing.expect;
 const ArrayList = std.ArrayList;
 const Allocator = std.mem.Allocator;
 const p = @import("std").debug.print;
@@ -115,6 +117,13 @@ export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaq
     const s3 = get_id(p3);
     p("id={s}\n",.{s3});
 
+    // const s3b = @ptrCast([*]const u8, s3);
+    // const s3b: [*:0]const u8 = s3;
+    // expect(mem.eql(u8, s3b, ">3655>3662_4"))
+    const as_slice: [:0]const u8 = std.mem.span(s3); // makes 0 terminated slice (sentinel value is zero byte)
+    std.testing.expectEqualStrings(as_slice, ">3655>3662_4") catch |err| {
+        std.debug.print("{e} {s}\n", .{err,as_slice});
+    };
     // var x = @intToPtr(*anyopaque,varlist[0]);
     // var x1 = @intToPtr(*anyopaque,varlist[0]);
     // var x1 = varlist[1];

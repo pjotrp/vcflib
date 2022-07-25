@@ -62,7 +62,7 @@ Variant createMultiallelic(vector<Variant>& vars) {
 
     int i = 0;
     vector<void *> ptrs;
-    for (auto v: vars) {
+    for (auto &v: vars) {
         void *p = &data[i];
         ptrs.push_back(p);
         i++;
