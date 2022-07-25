@@ -18,14 +18,17 @@ void *zig_variant(void *var) {
     return 0L;
 }
 
-const char *get_id(void *var) {
+const char *var_id(void *var) {
     auto v = static_cast<Variant*>(var);
-
-    cout << "BACK IN C++ getname " << v->id << endl;
+    // cout << "BACK IN C++ getname " << v->id << endl;
     return (v->id.data());
 }
 
-void set_id(void *var, const char *id) {
+const long var_pos(void *var) {
+    return (static_cast<Variant*>(var)->position);
+}
+
+void var_set_id(void *var, const char *id) {
     auto v = static_cast<Variant*>(var);
     v->id = id;
 }

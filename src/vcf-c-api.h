@@ -2,21 +2,27 @@
   C API for vcflib
  */
 
-// extern "C" {
-    // Variant accessors
-    const char *get_id(void *variant);
-    void set_id(void *variant, const char *);
-    extern void testme();
+// do not use extern "C" because this file ought to be ready for a C compiler (!C++)
 
-    // Some test functions
-    void *zig_variant_window();
-    void zig_variant_window_cleanup(void *varwin);
-    void win_push(void *varwin, void *var);
-    long win_size(void *varwin);
+// VCF variant accessors
+const char *var_id(void *variant);
+const long var_pos(void *variant);
 
-    void *zig_create_multi_allelic(void *retvar, void *varlist[], long size);
+void var_set_id(void *variant, const char *);
 
-    char *hello_zig2(char *s);
+// Zig functionality
 
-    void *zig_variant(void *var);
-// }
+void *zig_create_multi_allelic(void *retvar, void *varlist[], long size);
+
+
+// Some test functions
+void testme();
+void *zig_variant_window();
+void zig_variant_window_cleanup(void *varwin);
+void win_push(void *varwin, void *var);
+long win_size(void *varwin);
+
+
+char *hello_zig2(char *s);
+
+void *zig_variant(void *var);

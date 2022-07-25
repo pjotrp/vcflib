@@ -13,8 +13,9 @@ const hello = "Hello World from Zig";
 // const Variant = @OpaqueType();
 
 // C++ accessors for Variant object
-extern fn get_id(* anyopaque) [*c] const u8;
-extern fn set_id(?* anyopaque, [*c] const u8) void;
+extern fn var_id(* anyopaque) [*c] const u8;
+extern fn var_pos(* anyopaque) u64;
+extern fn var_set_id(?* anyopaque, [*c] const u8) void;
 extern fn call_c([*] const u8) void;
 
 export fn hello_zig2(msg: [*] const u8) [*]const u8 {
@@ -102,12 +103,12 @@ export fn win_size() usize {
 
 export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaque, size: usize) ?*anyopaque {
     _ = varlist;
-    const c_str = get_id(variant.?);
+    const c_str = var_id(variant.?);
     const s = @ptrCast([*c]const u8, c_str);
     p("And yes, we are back in zig: {s} -- {}\n\n",.{s,size});
 
     const p3 = @ptrCast(* anyopaque, varlist[3]);
-    const s3 = get_id(p3);
+    const s3 = var_id(p3);
     p("id={s}\n",.{s3});
 
     const as_slice: [:0]const u8 = std.mem.span(s3); // makes 0 terminated slice (sentinel value is zero byte)
@@ -122,11 +123,11 @@ export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaq
     for (varlist[0..size]) |ptr| {
              i = i + 1;
              const p2 = @ptrCast(* anyopaque, ptr);
-             const s2 = get_id(p2);
+             const s2 = var_id(p2);
              p("num = {}",.{i});
-             p("id = {s}\n",.{s2});
+             p("id = {s}, pos = {d}\n",.{s2,var_pos(p2)});
          }
-    set_id(variant,"HELLO");
+    // var_set_id(variant,"HELLO");
     return variant;
 }
 

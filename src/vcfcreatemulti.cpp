@@ -33,7 +33,8 @@ Type: transformation
     exit(1);
 }
 
-// Helper function to convert a vector of objects to a vector of pointers for zig
+// Helper function to convert a vector of objects to a vector of
+// pointers (for zig).
 vector<void *> ptr_vec(vector<Variant> &vars) {
     vector<void *> ptrs;
     for (auto &v: vars) {
