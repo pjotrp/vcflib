@@ -28,6 +28,11 @@ const long var_pos(void *var) {
     return (static_cast<Variant*>(var)->position);
 }
 
+const char *var_ref(void *var) {
+    auto v = static_cast<Variant*>(var);
+    return (v->ref.data());
+}
+
 void var_set_id(void *var, const char *id) {
     auto v = static_cast<Variant*>(var);
     v->id = id;

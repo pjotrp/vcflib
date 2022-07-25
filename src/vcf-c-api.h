@@ -7,6 +7,7 @@
 // VCF variant accessors
 const char *var_id(void *variant);
 const long var_pos(void *variant);
+const char *var_ref(void *variant);
 
 void var_set_id(void *variant, const char *);
 
