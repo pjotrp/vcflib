@@ -33,14 +33,14 @@ Type: transformation
     exit(1);
 }
 
-vector<void *> vec2ptrs(vector<Variant> &vars) {
+// Helper function to convert a vector of objects to a vector of pointers for zig
+vector<void *> ptr_vec(vector<Variant> &vars) {
     vector<void *> ptrs;
     for (auto &v: vars) {
         ptrs.push_back(&v);
     }
     return ptrs;
 }
-
 
 Variant createMultiallelic(vector<Variant>& vars) {
 
@@ -51,25 +51,7 @@ Variant createMultiallelic(vector<Variant>& vars) {
     Variant first = vars.front();
     Variant nvar = first;
 
-    Variant *data = vars.data();
-    void *test = &data;
-    printf("p:%p\n",&data);
-    printf("p:%p\n",data);
-    printf("&0:%p\n",&data[0]);
-    printf("0:%p\n",data[0]);
-    printf("1:%p\n",data[1]);
-    printf("&1:%p\n",&data[1]);
-    printf("2:%p\n",data[2]);
-    printf("t:%p\n",test);
-    void **t2 = (void**)test;
-    printf("t2:%p\n",t2);
-    printf("*t2:%p\n",*t2);
-    printf("0:%p\n",t2[0]);
-    printf("1:%p\n",t2[1]);
-    printf("2:%p\n",t2[2]);
-    // Variant *ret = (Variant *)zig_create_multi_allelic(&nvar, t2 , vars.size());
-
-    Variant *ret = (Variant *)zig_create_multi_allelic(&nvar, vec2ptrs(vars).data() , vars.size());
+    Variant *ret = (Variant *)zig_create_multi_allelic(&nvar, ptr_vec(vars).data() , vars.size());
 
     // set maxpos to the most outward allele position + its reference size
     auto maxpos = first.position + first.ref.size();
