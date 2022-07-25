@@ -104,8 +104,9 @@ const Variant = struct {
 
     const Self = @This();
 
-    // pub fn id(self: *Self) []u8 {
-    // }
+    pub fn iden(self: *Self) [*c]const u8 {
+        return var_id(self.v);
+    }
 
     pub fn pos(self: *Self) u64 {
         return var_pos(self.v);
@@ -125,7 +126,7 @@ export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaq
     const p3 = @ptrCast(* anyopaque, varlist[3]);
     const s3 = var_id(p3);
     var v = Variant{.v = varlist[3].?};
-    p("id={s} pos={d}\n",.{s3,v.pos()});
+    p("id={s} {s} pos={d}\n",.{s3,v.iden(),v.pos()});
 
 
     const as_slice: [:0]const u8 = std.mem.span(s3); // makes 0 terminated slice (sentinel value is zero byte)
