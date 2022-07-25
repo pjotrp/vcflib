@@ -33,6 +33,15 @@ Type: transformation
     exit(1);
 }
 
+vector<void *> vec2ptrs(vector<Variant> &vars) {
+    vector<void *> ptrs;
+    for (auto &v: vars) {
+        ptrs.push_back(&v);
+    }
+    return ptrs;
+}
+
+
 Variant createMultiallelic(vector<Variant>& vars) {
 
     if (vars.size() == 1) {
@@ -60,11 +69,7 @@ Variant createMultiallelic(vector<Variant>& vars) {
     printf("2:%p\n",t2[2]);
     // Variant *ret = (Variant *)zig_create_multi_allelic(&nvar, t2 , vars.size());
 
-    vector<void *> ptrs;
-    for (auto &v: vars) {
-        ptrs.push_back(&v);
-    }
-    Variant *ret = (Variant *)zig_create_multi_allelic(&nvar, ptrs.data() , vars.size());
+    Variant *ret = (Variant *)zig_create_multi_allelic(&nvar, vec2ptrs(vars).data() , vars.size());
 
     // set maxpos to the most outward allele position + its reference size
     auto maxpos = first.position + first.ref.size();
