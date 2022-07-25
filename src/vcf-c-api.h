@@ -5,6 +5,7 @@
 // extern "C" {
     // Variant accessors
     const char *get_id(void *variant);
+    void set_id(void *variant, const char *);
     extern void testme();
 
     // Some test functions

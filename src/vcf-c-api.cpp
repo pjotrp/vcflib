@@ -24,3 +24,8 @@ const char *get_id(void *var) {
     cout << "BACK IN C++ getname " << v->id << endl;
     return (v->id.data());
 }
+
+void set_id(void *var, const char *id) {
+    auto v = static_cast<Variant*>(var);
+    v->id = id;
+}

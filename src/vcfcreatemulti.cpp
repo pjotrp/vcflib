@@ -51,7 +51,7 @@ Variant createMultiallelic(vector<Variant>& vars) {
     Variant first = vars.front();
     Variant nvar = first;
 
-    Variant *ret = (Variant *)zig_create_multi_allelic(&nvar, ptr_vec(vars).data() , vars.size());
+    Variant *zvar = (Variant *)zig_create_multi_allelic(&nvar, ptr_vec(vars).data() , vars.size());
 
     // set maxpos to the most outward allele position + its reference size
     auto maxpos = first.position + first.ref.size();
@@ -76,7 +76,7 @@ Variant createMultiallelic(vector<Variant>& vars) {
         }
     }
 
-    Variant mvar = first;
+    Variant mvar = *zvar;
     mvar.alt.clear();
     mvar.ref = ref;
 

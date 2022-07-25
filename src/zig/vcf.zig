@@ -14,6 +14,7 @@ const hello = "Hello World from Zig";
 
 // C++ accessors for Variant object
 extern fn get_id(* anyopaque) [*c] const u8;
+extern fn set_id(?* anyopaque, [*c] const u8) void;
 extern fn call_c([*] const u8) void;
 
 export fn hello_zig2(msg: [*] const u8) [*]const u8 {
@@ -99,7 +100,7 @@ export fn win_size() usize {
 
 // pub extern fn zig_create_multi_allelic(retvar: ?*anyopaque, varlist: [*c]?*anyopaque, size: c_long) ?*anyopaque;
 
-export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaque, size: c_long) ?*anyopaque {
+export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaque, size: usize) ?*anyopaque {
     _ = varlist;
     const c_str = get_id(variant.?);
     const s = @ptrCast([*c]const u8, c_str);
@@ -113,23 +114,19 @@ export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaq
     std.testing.expectEqualStrings(as_slice, ">3655>3662_4") catch |err| {
         std.debug.print("{e} {s}\n", .{err,as_slice});
     };
-    // var x = @intToPtr(*anyopaque,varlist[0]);
-    // var x1 = @intToPtr(*anyopaque,varlist[0]);
-    // var x1 = varlist[1];
-    // p("And yes, we are back in zig: {p} \n\n",.{x});
 
     // expectEqual(variant,@intToPtr(*anyopaque,varlist[0])) catch unreachable;
     // var vars = @ptrCast([*] u8, varlist);
     // Now walk the list
-    // var i:u64 = 0;
-
-    // for (varlist[0..size]) |ptr| {
-    //         i = i + 1;
-    //         const p2 = @ptrCast(* anyopaque, ptr);
-    //         const s2 = get_id(p2);
-    //         p("num = {}",.{i});
-    //         p("id = {s}\n",.{s2});
-    //     }
+    var i:u64 = 0;
+    for (varlist[0..size]) |ptr| {
+             i = i + 1;
+             const p2 = @ptrCast(* anyopaque, ptr);
+             const s2 = get_id(p2);
+             p("num = {}",.{i});
+             p("id = {s}\n",.{s2});
+         }
+    set_id(variant,"HELLO");
     return variant;
 }
 
