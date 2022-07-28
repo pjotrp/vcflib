@@ -13,7 +13,7 @@ const hello = "Hello World from Zig";
 // const Variant = @OpaqueType();
 
 // C++ accessors for Variant object
-extern fn var_id(* anyopaque) [*c] const u8;
+pub extern fn var_id(* anyopaque) [*c] const u8;
 extern fn var_pos(* anyopaque) u64;
 extern fn var_ref(* anyopaque) [*c] const u8;
 extern fn var_set_id(?* anyopaque, [*c] const u8) void;
@@ -160,4 +160,11 @@ export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaq
 
 test "hello zig" {
     try expectEqual(hello_zig2(hello),hello);
+}
+
+test "variant" {
+}
+
+test {
+    _ = @import("samples.zig");
 }

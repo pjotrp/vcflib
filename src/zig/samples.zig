@@ -3,11 +3,12 @@ const ArrayList = std.ArrayList;
 const expect = @import("std").testing.expect;
 const expectEqual = @import("std").testing.expectEqual;
 const p = @import("std").debug.print;
+const var_id = @import("vcf.zig").var_id;
 
 const hello = "Hello World from Zig";
 
-extern fn call_c([*] const u8) void;
-extern fn get_name([*] const u8) [*] const u8;
+// extern fn call_c(*anyopaque) void;
+// extern fn get_name([*] const u8) [*] const u8;
 
 export fn hello_zig(msg: [*] const u8) [*]const u8 {
     const result = msg;
@@ -23,9 +24,9 @@ export fn zig_process_vector(vsize: u64, v: [*][*] const u8) void {
     // std.testing.expectEqual(&s, "1/0") catch unreachable;
 }
 
-export fn zig_process_opaque_ptr(variant: [*] const u8) void {
-    call_c(variant);
-    const c_str = get_name(variant);
+export fn zig_process_opaque_ptr(variant: *anyopaque) void {
+    // call_c(variant);
+    const c_str = var_id(variant);
     const s = @ptrCast([*c]const u8, c_str);
     p("And yes, we are back in zig: {s}\n\n",.{s});
 }

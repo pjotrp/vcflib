@@ -15,8 +15,10 @@ pub fn build(b: *std.build.Builder) void {
     // lib.emit_h = true; future version of zig?
     lib.install();
 
-    const main_tests = b.addTest("samples.zig");
+    const main_tests = b.addTest("vcf.zig");
     main_tests.setBuildMode(mode);
+    main_tests.addLibPath("../../build");
+    main_tests.addObjectFile("../../build/libvcflib.a");
 
     const test_step = b.step("test", "Run library tests");
     test_step.dependOn(&main_tests.step);
