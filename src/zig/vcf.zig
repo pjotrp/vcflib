@@ -12,6 +12,9 @@ const hello = "Hello World from Zig";
 
 // const Variant = @OpaqueType();
 
+// C++ constructor
+extern fn var_parse(line: [*c] const u8, parse_samples: bool) *anyopaque;
+
 // C++ accessors for Variant object
 pub extern fn var_id(* anyopaque) [*c] const u8;
 extern fn var_pos(* anyopaque) u64;
@@ -24,81 +27,7 @@ export fn hello_zig2(msg: [*] const u8) [*]const u8 {
     return result;
 }
 
-
-pub fn VarWindowX(comptime T: type) type {
-
-    return struct {
-        stack: ArrayList(T),
-
-        const Self = @This();
-
-        pub fn init(allocator: Allocator) Self {
-            return Self{ .stack = ArrayList(T).init(allocator) };
-        }
-
-        pub fn deinit(self: *Self) void {
-            self.stack.deinit();
-        }
-
-        pub fn push(self: *Self, value: T) !void {
-            p("HELLO",.{});
-            try self.stack.append(value);
-            p("HELLOEXIT",.{});
-        }
-
-        pub fn pop(self: *Self) ?T {
-            return self.stack.popOrNull();
-        }
-
-        pub fn top(self: *Self) ?T {
-            if (self.stack.items.len == 0) {
-                return null;
-            }
-            return self.stack.items[self.stack.items.len - 1];
-        }
-
-        pub fn count(self: *Self) usize {
-            return self.stack.items.len;
-        }
-
-        pub fn isEmpty(self: *Self) bool {
-            return self.count() == 0;
-        }
-    };
-}
-
 const test_allocator = std.testing.allocator;
-const MyVarWindow = ArrayList(* anyopaque);
-var win = MyVarWindow.init(test_allocator);
-
-// Return a pointer to the Variant window class
-// void *zig_variant_window();
-export fn zig_variant_window() * anyopaque {
-    return &win;
-}
-
-export fn zig_variant_window_cleanup(win2: *MyVarWindow) void {
-    _ = win2;
-    // p("DONE {}\n",.{win_size()});
-}
-
-export fn win_push(win2: *MyVarWindow, vcfvar: *anyopaque) void {
-    var ptr = @ptrToInt(vcfvar);
-    _ = ptr;
-    // var w: * MyVarWindow = @ptrCast(*MyVarWindow, @alignCast(@alignOf(*MyVarWindow), win2));
-    var w = win2;
-    // p("BEFORE:",.{});
-    // p("use {p}\n",.{w});
-    w.append(vcfvar) catch |err| {
-                std.debug.print("out of memory {e}\n", .{err});
-            };
-    // p("AFTER\n",.{});
-}
-
-export fn win_size() usize {
-    return win.items.len;
-}
-
 
 const Variant = struct {
     v: *anyopaque,
@@ -127,7 +56,15 @@ const Variant = struct {
 // pub extern fn zig_create_multi_allelic(retvar: ?*anyopaque, varlist: [*c]?*anyopaque, size: c_long) ?*anyopaque;
 
 export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaque, size: usize) ?*anyopaque {
-    _ = varlist;
+    var v1 = var_parse("TEST\t1\t2\t3\t4\tt5\t6",false);
+    _ = v1;
+    var c_var = var_parse("a\t281\t>1>9\tAGCCGGGGCAGAAAGTTCTTCCTTGAATGTGGTCATCTGCATTTCAGCTCAGGAATCCTGCAAAAGACAG\tCTGTCTTTTGCAGGATTCCTGTGCTGAAATGCAGATGACCGCATTCAAGGAAGAACTATCTGCCCCGGCT\t60.0\t.\tAC=1;AF=1;AN=1;AT=>1>2>3>4>5>6>7>8>9,>1<8>10<6>11<4>12<2>9;NS=1;LV=0\tGT\t1",false);
+    var v2 = Variant{.v = c_var};
+    p("---->{s}\n",.{v2.id().ptr});
+    expect(mem.eql(u8, v2.id(), ">1>9")) catch unreachable;
+    expectEqual(v2.id().len,">1>9".len) catch |err| {
+        std.debug.print("{e} <-> {s}\n", .{err,v2.id()});
+    };
     const c_str = var_id(variant.?);
     const s = @ptrCast([*c]const u8, c_str);
     p("And yes, we are back in zig: {s} -- {}\n\n",.{s,size});
@@ -163,6 +100,13 @@ test "hello zig" {
 }
 
 test "variant" {
+    // var c_var = var_parse("a\t281\t>1>9\tAGCCGGGGCAGAAAGTTCTTCCTTGAATGTGGTCATCTGCATTTCAGCTCAGGAATCCTGCAAAAGACAG\tCTGTCTTTTGCAGGATTCCTGTGCTGAAATGCAGATGACCGCATTCAAGGAAGAACTATCTGCCCCGGCT\t60.0\t.\tAC=1;AF=1;AN=1;AT=>1>2>3>4>5>6>7>8>9,>1<8>10<6>11<4>12<2>9;NS=1;LV=0\tGT\t1",false);
+    // var v2 = Variant{.v = c_var};
+    // p("---->{s}\n",.{v2.id()});
+    // expect(mem.eql(u8, v2.id(), ">1>9")) catch |err| {
+    //     std.debug.print("{e} <-> {s}\n", .{err,v2.id()});
+    // };
+
 }
 
 test {

@@ -4,6 +4,10 @@
 
 // do not use extern "C" because this file ought to be ready for a C compiler (!C++)
 
+// VCF constructors
+
+void *var_parse(const char *line, bool parse_samples);
+
 // VCF variant accessors
 const char *var_id(void *variant);
 const long var_pos(void *variant);
@@ -14,7 +18,6 @@ void var_set_id(void *variant, const char *);
 // Zig functionality
 
 void *zig_create_multi_allelic(void *retvar, void *varlist[], long size);
-
 
 // Some test functions
 void testme();

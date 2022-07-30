@@ -18,6 +18,16 @@ void *zig_variant(void *var) {
     return 0L;
 }
 
+void *var_parse(const char *line, bool parse_samples) {
+    Variant * var = new Variant(); // construct buffer
+    // Variant::parse(string& line, bool parseSamples) {
+    string s = line;
+    var->parse(s, parse_samples);
+    cerr << "HEY\n" << s << "{" << var->id << "}" << endl;
+    printf("<%p %s>\n",var,var->id.c_str());
+    return var;
+}
+
 const char *var_id(void *var) {
     auto v = static_cast<Variant*>(var);
     // cout << "BACK IN C++ getname " << v->id << endl;
