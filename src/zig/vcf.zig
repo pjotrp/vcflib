@@ -99,7 +99,12 @@ test "hello zig" {
     try expectEqual(hello_zig2(hello),hello);
 }
 
+
 test "variant" {
+    const MockVariant = struct {
+    id: [] const u8 = "TEST",
+    };
+
     // var c_var = var_parse("a\t281\t>1>9\tAGCCGGGGCAGAAAGTTCTTCCTTGAATGTGGTCATCTGCATTTCAGCTCAGGAATCCTGCAAAAGACAG\tCTGTCTTTTGCAGGATTCCTGTGCTGAAATGCAGATGACCGCATTCAAGGAAGAACTATCTGCCCCGGCT\t60.0\t.\tAC=1;AF=1;AN=1;AT=>1>2>3>4>5>6>7>8>9,>1<8>10<6>11<4>12<2>9;NS=1;LV=0\tGT\t1",false);
     // var v2 = Variant{.v = c_var};
     // p("---->{s}\n",.{v2.id()});
@@ -107,6 +112,9 @@ test "variant" {
     //     std.debug.print("{e} <-> {s}\n", .{err,v2.id()});
     // };
 
+    const v = MockVariant{};
+    try expect(std.mem.eql(u8, v.id, "TEST"));
+    _ = v;
 }
 
 test {
