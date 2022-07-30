@@ -54,16 +54,6 @@ Variant createMultiallelic(vector<Variant>& vars) {
 
     Variant *zvar = (Variant *)zig_create_multi_allelic(&nvar, ptr_vec(vars).data() , vars.size());
 
-    // set maxpos to the most outward allele position + its reference size
-    auto maxpos = first.position + first.ref.size();
-    for (auto v: vars) {
-        if (maxpos < v.position + v.ref.size()) {
-            maxpos = v.position + v.ref.size();
-        }
-    }
-
-    int numalt = vars.size();
-
     // get REF
     // use start position to extend all other alleles
     int start = first.position;
@@ -172,7 +162,7 @@ int main(int argc, char** argv) {
     vector<Variant> vars;
 
     // cout << "Calling into Zig" << endl;
-    auto var_window = zig_variant_window();
+    //auto var_window = zig_variant_window();
 
     while (variantFile.getNextVariant(var)) {
 
@@ -183,7 +173,6 @@ int main(int argc, char** argv) {
         if (vars.empty()) { // track list of variants in window (alt alleles)
             vars.push_back(var);
             Variant *copy2 = &vars.back();
-            win_push(var_window,copy2);
             continue;
         } else {
             // compute maxpos as the most right position in the current reference window. Note
@@ -203,12 +192,10 @@ int main(int argc, char** argv) {
                 lastSeqName = var.sequenceName;
                 vars.push_back(var);
                 Variant *copy2 = &vars.back();
-                win_push(var_window,copy2);
             } else if (var.position < maxpos) {
                 // As long as it is in window add it to the list
                 vars.push_back(var);
                 Variant *copy2 = &vars.back();
-                win_push(var_window,copy2);
             } else {
                 // Next variant is out of window, so create single line variant
                 Variant result = createMultiallelic(vars);
@@ -216,7 +203,6 @@ int main(int argc, char** argv) {
                 vars.clear();
                 vars.push_back(var);
                 Variant *copy2 = &vars.back();
-                win_push(var_window,copy2);
             }
         }
     }
@@ -225,7 +211,6 @@ int main(int argc, char** argv) {
         Variant result = createMultiallelic(vars);
         cout << result << endl;
     }
-    zig_variant_window_cleanup(var_window);
 
     return 0;
 
