@@ -100,10 +100,32 @@ test "hello zig" {
 }
 
 
-test "variant" {
+//    // set maxpos to the most outward allele position + its reference size
+//    auto maxpos = first.position + first.ref.size();
+//    for (auto v: vars) {
+//         if (maxpos < v.position + v.ref.size()) {
+//             maxpos = v.position + v.ref.size();
+//         }
+//     }
+
     const MockVariant = struct {
-    id: [] const u8 = "TEST",
+      id: [] const u8 = "TEST",
+      pos: u64,
+      ref: [] const u8
     };
+
+fn refs_maxpos(list: std.ArrayList(MockVariant)) u64 {
+    var mpos = list.items[0].pos;
+    for (list.items) |v| {
+            const npos = v.pos + v.ref.len;
+            if (npos > mpos)
+                mpos = npos;
+        }
+    return mpos;
+}
+
+
+test "variant" {
 
     // var c_var = var_parse("a\t281\t>1>9\tAGCCGGGGCAGAAAGTTCTTCCTTGAATGTGGTCATCTGCATTTCAGCTCAGGAATCCTGCAAAAGACAG\tCTGTCTTTTGCAGGATTCCTGTGCTGAAATGCAGATGACCGCATTCAAGGAAGAACTATCTGCCCCGGCT\t60.0\t.\tAC=1;AF=1;AN=1;AT=>1>2>3>4>5>6>7>8>9,>1<8>10<6>11<4>12<2>9;NS=1;LV=0\tGT\t1",false);
     // var v2 = Variant{.v = c_var};
@@ -112,9 +134,17 @@ test "variant" {
     //     std.debug.print("{e} <-> {s}\n", .{err,v2.id()});
     // };
 
-    const v = MockVariant{};
-    try expect(std.mem.eql(u8, v.id, "TEST"));
-    _ = v;
+    var list = std.ArrayList(MockVariant).init(std.testing.allocator);
+    defer list.deinit();
+
+    const v1 = MockVariant{ .pos = 10, .ref = "AAAA" };
+    try expect(std.mem.eql(u8, v1.id, "TEST"));
+    try list.append(v1);
+    const v2 = MockVariant{ .pos = 10, .ref = "AAAAA" };
+    try list.append(v2);
+    const maxpos = refs_maxpos(list);
+    p("<{any}>",.{maxpos});
+    try expect(maxpos == 15);
 }
 
 test {
