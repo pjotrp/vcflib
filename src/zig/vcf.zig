@@ -5,6 +5,7 @@ const samples = @import("samples");
 const expectEqual = @import("std").testing.expectEqual;
 const expect = @import("std").testing.expect;
 const ArrayList = std.ArrayList;
+const StringList = ArrayList([] const u8);
 const Allocator = std.mem.Allocator;
 const p = @import("std").debug.print;
 
@@ -124,6 +125,40 @@ fn refs_maxpos(list: std.ArrayList(MockVariant)) u64 {
     return mpos;
 }
 
+//    int start = first.position;
+//    string ref = first.ref;
+
+//    for (vector<Variant>::iterator v = vars.begin() + 1; v != vars.end(); ++v) {
+//        int sdiff = (v->position + v->ref.size()) - (start + ref.size());
+//        int pdiff = (start + ref.size()) - v->position;
+//        if (sdiff > 0) {
+//            ref.append(v->ref.substr(pdiff, sdiff));
+//        }
+//    }
+
+/// Expands reference to overlap all variants
+fn expand_ref(list: ArrayList(MockVariant)) !StringList {
+    var res = StringList.init(std.testing.allocator);
+    const first = list.items[0];
+    try res.append(first.ref);
+    const left0 = first.pos;
+    const right0 = left0 + first.ref.len;
+    for (list.items) |v| {
+            const left1 = v.pos;
+            const right1 = v.pos + v.ref.len;
+            // ref0     |AAAAA| sdiff |
+            // ref1     |AAAAAAAAAAAAA|
+            //          |pdiff|
+            const sdiff = right1 - right0; // diff between ref end positions
+            const pdiff = right0 - left1; // diff between ref right and var left
+            if (sdiff > 0) {
+                // res.append(v.ref[pdiff..pdiff+sdiff]);
+                res.append(v.ref[pdiff..pdiff+sdiff]) catch unreachable;
+            }
+        }
+    return res;
+}
+
 
 test "variant" {
 
@@ -145,6 +180,14 @@ test "variant" {
     const maxpos = refs_maxpos(list);
     p("<{any}>",.{maxpos});
     try expect(maxpos == 15);
+
+    const nref = try expand_ref(list);
+    for (nref.items) |item| {
+            p("{s}-",.{item});
+        }
+    // try expect(std.mem.eql(u8, nref, "AAAA"));
+
+    nref.deinit();
 }
 
 test {
