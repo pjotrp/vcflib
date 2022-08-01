@@ -145,14 +145,21 @@ fn concat(allocator: std.mem.Allocator, s1: [] const u8, s2: [] const u8) ![] co
     return result;
 }
 
+fn concat2(list: *ArrayList(u8), s: [] const u8) void {
+   for (s) |c| {
+      list.append(c) catch unreachable;
+   }
+}
+
 /// Expands reference to overlap all variants
-fn expand_ref(list: ArrayList(MockVariant)) ![] const u8 {
+fn expand_ref(list: ArrayList(MockVariant)) !ArrayList(u8) {
     const allocator = std.testing.allocator;
     var res = ArrayList(u8).init(allocator);
     defer res.deinit();
+    try res.append('T');
     const first = list.items[0];
-    var result = try concat(allocator,first.ref,res.items);
-    p("!{s}!",.{result});
+    concat2(&res,first.ref);
+    // p("!{s}!",.{res});
     // defer test_allocator.free(result);
 
     const left0 = first.pos;
@@ -173,14 +180,13 @@ fn expand_ref(list: ArrayList(MockVariant)) ![] const u8 {
             if (sdiff > 0) {
                 // newref = ref + append
                 // try res.append(v.ref[pdiff..pdiff+sdiff]);
-                var buf = try concat(allocator,result,v.ref[pdiff..pdiff+sdiff]);
-                result = buf;
-                p("!{s}!",.{result});
+                concat2(&res,v.ref[pdiff..pdiff+sdiff]);
+                p("!{s}!",.{res.items});
                 refsize += sdiff;
             }
             _ = pdiff;
         }
-    return result;
+    return res;
 }
 
 
@@ -206,12 +212,11 @@ test "variant ref expansion" {
     try expect(maxpos == 15);
 
     const nref = try expand_ref(list);
-    defer test_allocator.free(nref);
+    // defer test_allocator.free(nref);
     // p("<{s}>",.{nref});
-    p("!{s}!",.{nref});
-    expect(std.mem.eql(u8, nref, "AAAAA")) catch |e| {
-        p("{e}:{s}",.{e,nref});
-        return;
+    // p("!{s}!",.{nref});
+    expect(std.mem.eql(u8, nref.items, "TAAAA")) catch |e| {
+        p("{e}:",.{e});
     };
 }
 
