@@ -1,6 +1,7 @@
 const std = @import("std");
 // const variant = @import("variant");
 const mem = @import("std").mem;
+const fmt = std.fmt;
 const samples = @import("samples");
 const expectEqual = @import("std").testing.expectEqual;
 const expect = @import("std").testing.expect;
@@ -36,8 +37,8 @@ const Variant = struct {
     const Self = @This();
 
     pub fn id(self: *Self) [:0]const u8 {
-        const buffer: [*c]const u8 = var_id(self.v);
-        const str = std.mem.span(@ptrCast([*:0]const u8, buffer));
+        const buf: [*c]const u8 = var_id(self.v);
+        const str = std.mem.span(@ptrCast([*:0]const u8, buf));
         return str;
     }
 
@@ -46,8 +47,8 @@ const Variant = struct {
     }
 
     pub fn ref(self: *Self) [:0] const u8 {
-        const buffer: [*c]const u8 = var_ref(self.v);
-        const str = std.mem.span(@ptrCast([*:0]const u8, buffer));
+        const buf: [*c]const u8 = var_ref(self.v);
+        const str = std.mem.span(@ptrCast([*:0]const u8, buf));
         return str;
     }
 
@@ -137,30 +138,46 @@ fn refs_maxpos(list: std.ArrayList(MockVariant)) u64 {
 //    }
 
 /// Expands reference to overlap all variants
-fn expand_ref(list: ArrayList(MockVariant)) !StringList {
-    var res = StringList.init(std.testing.allocator);
+fn expand_ref(list: ArrayList(MockVariant)) ![] const u8 {
+    const allocator = std.testing.allocator;
+    var res = ArrayList(u8).init(allocator);
+    defer res.deinit();
     const first = list.items[0];
-    try res.append(first.ref);
+    var result = try allocator.alloc(u8, res.items.len+first.ref.len);
+    mem.copy(u8, result[0..], res.items);
+    mem.copy(u8, result[res.items.len..], first.ref);
+    p("!{s}!",.{result});
     const left0 = first.pos;
     const right0 = left0 + first.ref.len;
+    var refsize = first.ref.len+1;
+
     for (list.items) |v| {
             const left1 = v.pos;
             const right1 = v.pos + v.ref.len;
-            // ref0     |AAAAA| sdiff |
-            // ref1     |AAAAAAAAAAAAA|
-            //          |pdiff|
-            const sdiff = right1 - right0; // diff between ref end positions
-            const pdiff = right0 - left1; // diff between ref right and var left
+            //            ref    sdiff
+            // ref0     |AAAAA|------->|
+            // ref1      |AAAAAAAAAAAAA|
+            //           |--->| append |
+            //            pdiff
+
+            const sdiff = right1 - right0; // diff between ref0 and ref1 right positions
+            const pdiff = right0 - left1; // diff between ref0 right and ref1 left
             if (sdiff > 0) {
-                // res.append(v.ref[pdiff..pdiff+sdiff]);
-                res.append(v.ref[pdiff..pdiff+sdiff]) catch unreachable;
+                // newref = ref + append
+                // try res.append(v.ref[pdiff..pdiff+sdiff]);
+                refsize += sdiff;
             }
+            _ = pdiff;
         }
-    return res;
+    p("{s}",.{res.items});
+    var all_together: [100]u8 = undefined;
+    const res2 = all_together[0..];
+    // var res2: [] u8 = try allocator.alloc(u8,refsize+100);
+    return res2;
 }
 
 
-test "variant" {
+test "variant ref expansion" {
 
     // var c_var = var_parse("a\t281\t>1>9\tAGCCGGGGCAGAAAGTTCTTCCTTGAATGTGGTCATCTGCATTTCAGCTCAGGAATCCTGCAAAAGACAG\tCTGTCTTTTGCAGGATTCCTGTGCTGAAATGCAGATGACCGCATTCAAGGAAGAACTATCTGCCCCGGCT\t60.0\t.\tAC=1;AF=1;AN=1;AT=>1>2>3>4>5>6>7>8>9,>1<8>10<6>11<4>12<2>9;NS=1;LV=0\tGT\t1",false);
     // var v2 = Variant{.v = c_var};
@@ -182,12 +199,9 @@ test "variant" {
     try expect(maxpos == 15);
 
     const nref = try expand_ref(list);
-    for (nref.items) |item| {
-            p("{s}-",.{item});
-        }
-    // try expect(std.mem.eql(u8, nref, "AAAA"));
-
-    nref.deinit();
+    defer test_allocator.free(nref);
+    p("<{s}>",.{nref});
+    try expect(std.mem.eql(u8, nref, "AAAAA"));
 }
 
 test {
