@@ -137,16 +137,24 @@ fn refs_maxpos(list: std.ArrayList(MockVariant)) u64 {
 //        }
 //    }
 
+fn concat(allocator: std.mem.Allocator, s1: [] const u8, s2: [] const u8) ![] const u8 {
+    // https://www.reddit.com/r/Zig/comments/bfcsul/concatenating_zig_strings/
+    var result = try allocator.alloc(u8, s1.len+s2.len);
+    mem.copy(u8, result[0..], s1);
+    mem.copy(u8, result[s1.len..], s2);
+    return result;
+}
+
 /// Expands reference to overlap all variants
 fn expand_ref(list: ArrayList(MockVariant)) ![] const u8 {
     const allocator = std.testing.allocator;
     var res = ArrayList(u8).init(allocator);
     defer res.deinit();
     const first = list.items[0];
-    var result = try allocator.alloc(u8, res.items.len+first.ref.len);
-    mem.copy(u8, result[0..], res.items);
-    mem.copy(u8, result[res.items.len..], first.ref);
+    var result = try concat(allocator,first.ref,res.items);
     p("!{s}!",.{result});
+    // defer test_allocator.free(result);
+
     const left0 = first.pos;
     const right0 = left0 + first.ref.len;
     var refsize = first.ref.len+1;
@@ -165,15 +173,14 @@ fn expand_ref(list: ArrayList(MockVariant)) ![] const u8 {
             if (sdiff > 0) {
                 // newref = ref + append
                 // try res.append(v.ref[pdiff..pdiff+sdiff]);
+                var buf = try concat(allocator,result,v.ref[pdiff..pdiff+sdiff]);
+                result = buf;
+                p("!{s}!",.{result});
                 refsize += sdiff;
             }
             _ = pdiff;
         }
-    p("{s}",.{res.items});
-    var all_together: [100]u8 = undefined;
-    const res2 = all_together[0..];
-    // var res2: [] u8 = try allocator.alloc(u8,refsize+100);
-    return res2;
+    return result;
 }
 
 
@@ -200,8 +207,12 @@ test "variant ref expansion" {
 
     const nref = try expand_ref(list);
     defer test_allocator.free(nref);
-    p("<{s}>",.{nref});
-    try expect(std.mem.eql(u8, nref, "AAAAA"));
+    // p("<{s}>",.{nref});
+    p("!{s}!",.{nref});
+    expect(std.mem.eql(u8, nref, "AAAAA")) catch |e| {
+        p("{e}:{s}",.{e,nref});
+        return;
+    };
 }
 
 test {
