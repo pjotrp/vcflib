@@ -149,7 +149,7 @@ fn concat(allocator: std.mem.Allocator, s1: [] const u8, s2: [] const u8) ![] co
 fn expand_ref(list: ArrayList(MockVariant)) !ArrayList(u8) {
     const allocator = std.testing.allocator;
     var res = ArrayList(u8).init(allocator);
-    defer res.deinit();
+    // defer res.deinit();
     // try res.append('T');
     const first = list.items[0];
     // concat2(&res,first.ref);
@@ -210,9 +210,8 @@ test "variant ref expansion" {
     // p("<{s}>",.{nref});
     // p("!{s}!",.{nref});
     try expect(nref.items.len == 5);
-    expect(std.mem.eql(u8, nref.items, "AAAAA")) catch |e| {
-        p("{e}:",.{e});
-    };
+    try expect(std.mem.eql(u8, nref.items, "AAAAA"));
+    nref.deinit();
 }
 
 test {
