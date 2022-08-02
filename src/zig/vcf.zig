@@ -169,11 +169,45 @@ fn expand_ref(list: ArrayList(MockVariant)) !ArrayList(u8) {
     return res;
 }
 
-fn expand_alt(list: ArrayList(MockVariant)) !ArrayList([] const u8) {
-    _ = list;
+fn expand_alt(ref: [] const u8, list: ArrayList(MockVariant)) !ArrayList([] const u8) {
+    _ = ref;
     const allocator = std.testing.allocator;
-    var alt = ArrayList([] const u8).init(allocator);
-    return alt;
+    // add alternates and splice them into the reference. It does not modify the ref.
+    const first = list.items[0];
+    var nalt = ArrayList([] const u8).init(allocator);
+    for (list.items) |v| {
+            p("!{s}!\n",.{v.ref});
+            const p5diff = v.pos - first.pos; // always >= 0 - will raise error otherwise
+            const right0 = @intCast(i64, first.pos + first.ref.len);
+            const right1 = @intCast(i64, v.pos + v.ref.len);
+            const p3diff = right0 - right1; // can be < 0
+            //            ref    sdiff
+            // ref0     |AAAAA|------->|
+            //        p5diff    p3diff
+            // ref1      |AAAAAAAAAAAAA|
+            //           |--->|        |
+            //            pdiff
+            const before = ref[0..p5diff]; // leading ref
+            // if (p3diff > 0 && p3diff < mvar.ref.size()) {
+            //   after = ref.substr(ref.size() - p3diff .. end);
+            var after = ArrayList(u8).init(allocator);
+            defer after.deinit();
+            if (p3diff > 0 and p3diff < v.ref.len)
+                try after.appendSlice(ref[ref.len-@intCast(u64,p3diff)..]);
+            for (v.alt.items) | alt | {
+                    p("alt={s}",.{alt});
+                    if (p3diff != 0 or p5diff != 0) {
+                        var new = ArrayList(u8).init(allocator);
+                        try new.appendSlice(before);
+                        try new.appendSlice(alt);
+                        try new.appendSlice(after.items);
+                        try nalt.append(new.items);
+                    } else {
+                        try nalt.append(alt);
+                    }
+            }
+        }
+    return nalt;
 }
 
 test "variant ref expansion" {
@@ -231,14 +265,19 @@ test "variant alt expansion" {
     defer alt3.deinit();
     var a3 = [_]u8{'c', 'c', 'c', 'c'};
     try alt3.append(a3[0..]);
-    const v3 = MockVariant{ .pos = 10, .ref = "AAAAACC", .alt = alt3 };
+    const v3 = MockVariant{ .pos = 10, .ref = "CC", .alt = alt3 };
     try list.append(v3);
-    const nalt = try expand_alt(list);
+    const nalt = try expand_alt("AAAAACC",list);
+    defer nalt.deinit();
 
-    try expect(nalt.items.len == 3);
+    expect(nalt.items.len == 3) catch |e| {
+        p("{e}: {d}",.{e,nalt.items.len});
+        return;
+    };
 
-
-    nalt.deinit();
+    for (nalt.items) |l| {
+            l.deinit();
+        }
 }
 
 test {
