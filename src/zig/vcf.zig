@@ -10,6 +10,10 @@ const StringList = ArrayList([] const u8);
 const Allocator = std.mem.Allocator;
 const p = @import("std").debug.print;
 
+const VCFError = error{
+    UnexpectedOrder
+};
+
 const hello = "Hello World from Zig";
 
 // const Variant = @OpaqueType();
@@ -113,7 +117,8 @@ test "hello zig" {
     const MockVariant = struct {
       id: [] const u8 = "TEST",
       pos: u64,
-      ref: [] const u8
+      ref: [] const u8,
+      alt: ArrayList([] u8) = undefined
     };
 
 fn refs_maxpos(list: std.ArrayList(MockVariant)) u64 {
@@ -124,25 +129,6 @@ fn refs_maxpos(list: std.ArrayList(MockVariant)) u64 {
                 mpos = npos;
         }
     return mpos;
-}
-
-//    int start = first.position;
-//    string ref = first.ref;
-
-//    for (vector<Variant>::iterator v = vars.begin() + 1; v != vars.end(); ++v) {
-//        int sdiff = (v->position + v->ref.size()) - (start + ref.size());
-//        int pdiff = (start + ref.size()) - v->position;
-//        if (sdiff > 0) {
-//            ref.append(v->ref.substr(pdiff, sdiff));
-//        }
-//    }
-
-fn concat(allocator: std.mem.Allocator, s1: [] const u8, s2: [] const u8) ![] const u8 {
-    // https://www.reddit.com/r/Zig/comments/bfcsul/concatenating_zig_strings/
-    var result = try allocator.alloc(u8, s1.len+s2.len);
-    mem.copy(u8, result[0..], s1);
-    mem.copy(u8, result[s1.len..], s2);
-    return result;
 }
 
 /// Expands reference to overlap all variants
@@ -158,12 +144,10 @@ fn expand_ref(list: ArrayList(MockVariant)) !ArrayList(u8) {
     // defer test_allocator.free(result);
 
     const left0 = first.pos;
-    const right0 = left0 + first.ref.len;
-    var refsize = first.ref.len+1;
-
     for (list.items) |v| {
+            const right0 = left0 + res.items.len;
             const left1 = v.pos;
-            const right1 = v.pos + v.ref.len;
+            const right1 = left1 + v.ref.len;
             //            ref    sdiff
             // ref0     |AAAAA|------->|
             // ref1      |AAAAAAAAAAAAA|
@@ -172,17 +156,25 @@ fn expand_ref(list: ArrayList(MockVariant)) !ArrayList(u8) {
 
             const sdiff = right1 - right0; // diff between ref0 and ref1 right positions
             const pdiff = right0 - left1; // diff between ref0 right and ref1 left
-            if (sdiff > 0) {
+            if (sdiff >= 0) {
                 // newref = ref + append
                 try res.appendSlice(v.ref[pdiff..pdiff+sdiff]);
-                p("!{s}!",.{res.items});
-                refsize += sdiff;
+            }
+            else {
+                // We expect slices to move right
+                return VCFError.UnexpectedOrder;
             }
             _ = pdiff;
         }
     return res;
 }
 
+fn expand_alt(list: ArrayList(MockVariant)) !ArrayList([] const u8) {
+    _ = list;
+    const allocator = std.testing.allocator;
+    var alt = ArrayList([] const u8).init(allocator);
+    return alt;
+}
 
 test "variant ref expansion" {
 
@@ -201,17 +193,52 @@ test "variant ref expansion" {
     try list.append(v1);
     const v2 = MockVariant{ .pos = 10, .ref = "AAAAA" };
     try list.append(v2);
+    const v3 = MockVariant{ .pos = 10, .ref = "AAAAACC" };
+    try list.append(v3);
     const maxpos = refs_maxpos(list);
     p("<{any}>",.{maxpos});
-    try expect(maxpos == 15);
+    try expect(maxpos == 17);
 
     const nref = try expand_ref(list);
     // defer test_allocator.free(nref);
     // p("<{s}>",.{nref});
     // p("!{s}!",.{nref});
-    try expect(nref.items.len == 5);
-    try expect(std.mem.eql(u8, nref.items, "AAAAA"));
+    try expect(nref.items.len == 7);
+    try expect(std.mem.eql(u8, nref.items, "AAAAACC"));
     nref.deinit();
+}
+
+test "variant alt expansion" {
+    var list = std.ArrayList(MockVariant).init(std.testing.allocator);
+    defer list.deinit();
+
+    var alt1 = std.ArrayList([] u8).init(std.testing.allocator);
+    defer alt1.deinit();
+    var a1 = [_]u8{'c', 'c'};
+    try alt1.append(a1[0..]);
+    const v1 = MockVariant{ .pos = 10, .ref = "AAAA", .alt = alt1 };
+    try expect(std.mem.eql(u8, v1.id, "TEST"));
+    try list.append(v1);
+
+    var alt2 = std.ArrayList([] u8).init(std.testing.allocator);
+    defer alt2.deinit();
+    var a2 = [_]u8{'c', 'c', 'c'};
+    try alt2.append(a2[0..]);
+    const v2 = MockVariant{ .pos = 10, .ref = "AAAAA", .alt = alt2 };
+    try list.append(v2);
+
+    var alt3 = std.ArrayList([] u8).init(std.testing.allocator);
+    defer alt3.deinit();
+    var a3 = [_]u8{'c', 'c', 'c', 'c'};
+    try alt3.append(a3[0..]);
+    const v3 = MockVariant{ .pos = 10, .ref = "AAAAACC", .alt = alt3 };
+    try list.append(v3);
+    const nalt = try expand_alt(list);
+
+    try expect(nalt.items.len == 3);
+
+
+    nalt.deinit();
 }
 
 test {
