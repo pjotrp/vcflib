@@ -169,12 +169,12 @@ fn expand_ref(list: ArrayList(MockVariant)) !ArrayList(u8) {
     return res;
 }
 
-fn expand_alt(ref: [] const u8, list: ArrayList(MockVariant)) !ArrayList([] const u8) {
+fn expand_alt(ref: [] const u8, list: ArrayList(MockVariant)) !ArrayList(ArrayList(u8)) {
     _ = ref;
     const allocator = std.testing.allocator;
     // add alternates and splice them into the reference. It does not modify the ref.
     const first = list.items[0];
-    var nalt = ArrayList([] const u8).init(allocator);
+    var nalt = ArrayList(ArrayList(u8)).init(allocator);
     for (list.items) |v| {
             p("!{s}!\n",.{v.ref});
             const p5diff = v.pos - first.pos; // always >= 0 - will raise error otherwise
@@ -196,14 +196,15 @@ fn expand_alt(ref: [] const u8, list: ArrayList(MockVariant)) !ArrayList([] cons
                 try after.appendSlice(ref[ref.len-@intCast(u64,p3diff)..]);
             for (v.alt.items) | alt | {
                     p("alt={s}",.{alt});
+                    var new = ArrayList(u8).init(allocator);
                     if (p3diff != 0 or p5diff != 0) {
-                        var new = ArrayList(u8).init(allocator);
                         try new.appendSlice(before);
                         try new.appendSlice(alt);
                         try new.appendSlice(after.items);
-                        try nalt.append(new.items);
+                        try nalt.append(new);
                     } else {
-                        try nalt.append(alt);
+                        try new.appendSlice(alt);
+                        try nalt.append(new);
                     }
             }
         }
@@ -244,7 +245,9 @@ test "variant ref expansion" {
 
 test "variant alt expansion" {
     var list = std.ArrayList(MockVariant).init(std.testing.allocator);
-    defer list.deinit();
+    defer {
+        list.deinit();
+    }
 
     var alt1 = std.ArrayList([] u8).init(std.testing.allocator);
     defer alt1.deinit();
@@ -268,16 +271,16 @@ test "variant alt expansion" {
     const v3 = MockVariant{ .pos = 10, .ref = "CC", .alt = alt3 };
     try list.append(v3);
     const nalt = try expand_alt("AAAAACC",list);
-    defer nalt.deinit();
-
+    defer {
+        for (nalt.items) |item| {
+                item.deinit();
+            }
+        nalt.deinit();
+    }
     expect(nalt.items.len == 3) catch |e| {
         p("{e}: {d}",.{e,nalt.items.len});
         return;
     };
-
-    for (nalt.items) |l| {
-            l.deinit();
-        }
 }
 
 test {
