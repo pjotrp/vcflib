@@ -178,34 +178,48 @@ fn expand_alt(ref: [] const u8, list: ArrayList(MockVariant)) !ArrayList(ArrayLi
     for (list.items) |v| {
             p("!{s}!\n",.{v.ref});
             const p5diff = v.pos - first.pos; // always >= 0 - will raise error otherwise
-            const right0 = @intCast(i64, first.pos + first.ref.len);
-            const right1 = @intCast(i64, v.pos + v.ref.len);
-            const p3diff = right0 - right1; // can be < 0
-            //            ref    sdiff
-            // ref0     |AAAAA|------->|
-            //        p5diff    p3diff
-            // ref1      |AAAAAAAAAAAAA|
-            //           |--->|        |
-            //            pdiff
             const before = ref[0..p5diff]; // leading ref
+
+            // ref0 has been expanded in a previous step to cover the full variant.
+            // the original code only deals with p3diff > 0.
+            //
+            // Insertion:
+            //            ref
+            // ref0     |AAAAA|------->|
+            //        p5diff    p3diff = -8 (start = 5--8 = 13
+            // ref1      |AAAAAAAAAAAAA|
+            //
+            // Deletion:
+            //            ref
+            // ref0     |AAAAA|
+            //        p5diff    p3diff = +2 (start = 5-2 = 3
+            // ref1      |AA|--
+
             // if (p3diff > 0 && p3diff < mvar.ref.size()) {
             //   after = ref.substr(ref.size() - p3diff .. end);
-            var after = ArrayList(u8).init(allocator);
-            defer after.deinit();
-            if (p3diff > 0 and p3diff < v.ref.len)
-                try after.appendSlice(ref[ref.len-@intCast(u64,p3diff)..]);
+            // var after = ArrayList(u8).init(allocator);
+            // defer after.deinit();
+            const right0 = first.pos + first.ref.len;
+            const right1 = v.pos + v.ref.len;
+            const p3diff = if (right0 > right1) right0 - right1 else 0;
+            const start  = ref.len - p3diff;
+
+            const after =
+                if (p3diff > 0 and p3diff < v.ref.len) ref[start..]
+                else "";
             for (v.alt.items) | alt | {
-                    p("alt={s}",.{alt});
+                    p("prev alt={s}",.{alt});
                     var new = ArrayList(u8).init(allocator);
                     if (p3diff != 0 or p5diff != 0) {
                         try new.appendSlice(before);
                         try new.appendSlice(alt);
-                        try new.appendSlice(after.items);
+                        try new.appendSlice(after);
                         try nalt.append(new);
                     } else {
                         try new.appendSlice(alt);
                         try nalt.append(new);
                     }
+                    p("new alt={s}",.{new.items});
             }
         }
     return nalt;
@@ -259,7 +273,7 @@ test "variant alt expansion" {
 
     var alt2 = std.ArrayList([] u8).init(std.testing.allocator);
     defer alt2.deinit();
-    var a2 = [_]u8{'c', 'c', 'c'};
+    var a2 = [_]u8{'c'};
     try alt2.append(a2[0..]);
     const v2 = MockVariant{ .pos = 10, .ref = "AAAAA", .alt = alt2 };
     try list.append(v2);
