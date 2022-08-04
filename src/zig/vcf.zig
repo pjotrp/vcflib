@@ -10,6 +10,8 @@ const StringList = ArrayList([] const u8);
 const Allocator = std.mem.Allocator;
 const p = @import("std").debug.print;
 
+const test_allocator = std.testing.allocator;
+
 const VCFError = error{
     UnexpectedOrder
 };
@@ -33,24 +35,22 @@ export fn hello_zig2(msg: [*] const u8) [*]const u8 {
     return result;
 }
 
-const test_allocator = std.testing.allocator;
-
 const Variant = struct {
     v: *anyopaque,
 
     const Self = @This();
 
-    pub fn id(self: *Self) [:0]const u8 {
+    pub fn id(self: *const Self) [:0]const u8 {
         const buf: [*c]const u8 = var_id(self.v);
         const str = std.mem.span(@ptrCast([*:0]const u8, buf));
         return str;
     }
 
-    pub fn pos(self: *Self) u64 {
+    pub fn pos(self: *const Self) u64 {
         return var_pos(self.v);
     }
 
-    pub fn ref(self: *Self) [:0] const u8 {
+    pub fn ref(self: *const Self) [] const u8 {
         const buf: [*c]const u8 = var_ref(self.v);
         const str = std.mem.span(@ptrCast([*:0]const u8, buf));
         return str;
@@ -105,11 +105,27 @@ export fn zig_create_multi_allelic2(variant: ?*anyopaque, varlist: [*c]?* anyopa
 // by @Cimport:
 // pub extern fn zig_create_multi_allelic(retvar: ?*anyopaque, varlist: [*c]?*anyopaque, size: c_long) ?*anyopaque;
 
+// @@
 export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaque, size: usize) *anyopaque {
     _ = size;
     _ = varlist;
     var mvar = Variant{.v = variant.?};
+    // var list = ArrayList(Variant).init(test_allocator);
+    var vs = ArrayList(Variant).init(test_allocator);
+    vs.append(mvar) catch unreachable;
+    const maxpos = refs_maxpos(vs);
+    p("<{any}>",.{maxpos});
     return mvar.v;
+}
+
+fn refs_maxpos(list: ArrayList(Variant)) usize {
+    var mpos = list.items[0].pos();
+    for (list.items) |v| {
+            var npos = v.pos() + v.ref().len;
+            if (npos > mpos)
+                mpos = npos;
+        }
+    return mpos;
 }
 
 
@@ -128,10 +144,12 @@ export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaq
       alt: ArrayList([] u8) = undefined
     };
 
-fn refs_maxpos(list: std.ArrayList(MockVariant)) u64 {
+
+fn refs_maxpos2(list: std.ArrayList(MockVariant)) u64 {
     var mpos = list.items[0].pos;
     for (list.items) |v| {
-            const npos = v.pos + v.ref.len;
+            const ref = v.ref;
+            const npos = v.pos + ref.len;
             if (npos > mpos)
                 mpos = npos;
         }
@@ -256,7 +274,7 @@ test "variant ref expansion" {
     try list.append(v2);
     const v3 = MockVariant{ .pos = 10, .ref = "AAAAACC" };
     try list.append(v3);
-    const maxpos = refs_maxpos(list);
+    const maxpos = refs_maxpos2(list);
     p("<{any}>",.{maxpos});
     try expect(maxpos == 17);
 
