@@ -61,7 +61,7 @@ const Variant = struct {
 // by @Cimport:
 // pub extern fn zig_create_multi_allelic(retvar: ?*anyopaque, varlist: [*c]?*anyopaque, size: c_long) ?*anyopaque;
 
-export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaque, size: usize) ?*anyopaque {
+export fn zig_create_multi_allelic2(variant: ?*anyopaque, varlist: [*c]?* anyopaque, size: usize) ?*anyopaque {
     var v1 = var_parse("TEST\t1\t2\t3\t4\tt5\t6",false);
     _ = v1;
     var c_var = var_parse("a\t281\t>1>9\tAGCCGGGGCAGAAAGTTCTTCCTTGAATGTGGTCATCTGCATTTCAGCTCAGGAATCCTGCAAAAGACAG\tCTGTCTTTTGCAGGATTCCTGTGCTGAAATGCAGATGACCGCATTCAAGGAAGAACTATCTGCCCCGGCT\t60.0\t.\tAC=1;AF=1;AN=1;AT=>1>2>3>4>5>6>7>8>9,>1<8>10<6>11<4>12<2>9;NS=1;LV=0\tGT\t1",false);
@@ -101,8 +101,15 @@ export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaq
     return variant;
 }
 
-test "hello zig" {
-    try expectEqual(hello_zig2(hello),hello);
+
+// by @Cimport:
+// pub extern fn zig_create_multi_allelic(retvar: ?*anyopaque, varlist: [*c]?*anyopaque, size: c_long) ?*anyopaque;
+
+export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaque, size: usize) *anyopaque {
+    _ = size;
+    _ = varlist;
+    var mvar = Variant{.v = variant.?};
+    return mvar.v;
 }
 
 
@@ -224,6 +231,11 @@ fn expand_alt(ref: [] const u8, list: ArrayList(MockVariant)) !ArrayList(ArrayLi
         }
     return nalt;
 }
+
+test "hello zig" {
+    try expectEqual(hello_zig2(hello),hello);
+}
+
 
 test "variant ref expansion" {
 

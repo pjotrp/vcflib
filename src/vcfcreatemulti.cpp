@@ -48,69 +48,6 @@ vector<void *> ptr_vec(vector<Variant> &vars) {
     return ptrs;
 }
 
-
-Variant createMultiallelic_zig(vector<Variant>& vars) {
-
-    if (vars.size() == 1) {
-        return vars.front();
-    }
-
-    Variant first = vars.front();
-    Variant nvar = first;
-
-    // Variant *zvar = (Variant *)zig_create_multi_allelic(&nvar, ptr_vec(vars).data() , vars.size());
-
-    // get REF
-    // use start position to extend all other alleles
-    int start = first.position;
-    string ref = first.ref;
-
-    for (vector<Variant>::iterator v = vars.begin() + 1; v != vars.end(); ++v) {
-        int sdiff = (v->position + v->ref.size()) - (start + ref.size());
-        int pdiff = (start + ref.size()) - v->position;
-        if (sdiff > 0) {
-            ref.append(v->ref.substr(pdiff, sdiff));
-        }
-    }
-
-    // Variant mvar = *zvar;
-    Variant mvar = first;
-    mvar.alt.clear();
-    mvar.ref = ref;
-
-    for (vector<Variant>::iterator v = vars.begin(); v != vars.end(); ++v) {
-        // add alternates and splice them into the reference
-        int p5diff = v->position - mvar.position;
-        int p3diff = (mvar.position + mvar.ref.size()) - (v->position + v->ref.size());
-        string before;
-        string after;
-        if (p5diff > 0) {
-            before = mvar.ref.substr(0, p5diff);
-        }
-        if (p3diff > 0 && p3diff < mvar.ref.size()) {
-            after = mvar.ref.substr(mvar.ref.size() - p3diff);
-        }
-        if (p5diff || p3diff) {
-            for (vector<string>::iterator a = v->alt.begin(); a != v->alt.end(); ++a) {
-                mvar.alt.push_back(before);
-                string& alt = mvar.alt.back();
-                alt.append(*a);
-                alt.append(after);
-            }
-        } else {
-            for (vector<string>::iterator a = v->alt.begin(); a != v->alt.end(); ++a) {
-                mvar.alt.push_back(*a);
-            }
-        }
-    }
-
-    stringstream s;
-    s << vars.front().position << "-" << vars.back().position;
-    mvar.info["combined"].push_back(s.str());
-
-    return mvar;
-}
-
 Variant createMultiallelic_legacy(vector<Variant>& vars) {
 
     if (vars.size() == 1) {
@@ -170,6 +107,20 @@ Variant createMultiallelic_legacy(vector<Variant>& vars) {
 
     return mvar;
 }
+
+Variant createMultiallelic_zig(vector<Variant>& vars) {
+
+    if (vars.size() == 1) {
+        return vars.front();
+    }
+    Variant first = vars.front();
+    Variant nvar = first;
+
+    Variant *mvar = (Variant *)zig_create_multi_allelic(&nvar, ptr_vec(vars).data() , vars.size());
+
+    return *mvar;
+}
+
 
 Variant createMultiallelic(vector<Variant>& vars) {
     if (nextGen)
