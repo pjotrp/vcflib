@@ -28,6 +28,7 @@ pub extern fn var_id(* anyopaque) [*c] const u8;
 extern fn var_pos(* anyopaque) u64;
 extern fn var_ref(* anyopaque) [*c] const u8;
 extern fn var_set_id(?* anyopaque, [*c] const u8) void;
+extern fn var_set_ref(?* anyopaque, [*c] const u8) void;
 extern fn call_c([*] const u8) void;
 
 export fn hello_zig2(msg: [*] const u8) [*]const u8 {
@@ -56,6 +57,9 @@ const Variant = struct {
         return str;
     }
 
+    pub fn set_ref(self: *const Self, nref: [:0] const u8) void {
+        var_set_ref(self.v,@ptrCast([*c]const u8,nref));
+    }
 };
 
 // by @Cimport:
@@ -108,13 +112,23 @@ export fn zig_create_multi_allelic2(variant: ?*anyopaque, varlist: [*c]?* anyopa
 // @@
 export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaque, size: usize) *anyopaque {
     _ = size;
-    _ = varlist;
     var mvar = Variant{.v = variant.?};
     // var list = ArrayList(Variant).init(test_allocator);
     var vs = ArrayList(Variant).init(test_allocator);
-    vs.append(mvar) catch unreachable;
+    var i: usize = 0;
+    while (i < size) : (i += 1) {
+        var v = Variant{.v = varlist[i].?};
+        vs.append(v) catch unreachable;
+    }
     const maxpos = refs_maxpos(Variant,vs);
-    p("<{any}>",.{maxpos});
+    p("<{any}>",.{maxpos}); // use to update origin
+    var nref = expand_ref(Variant,vs) catch unreachable;
+    // defer nref.deinit();
+    // try expect(nref.items.len == 7);
+    // try expect(std.mem.eql(u8, nref.items, "AAAAACC"));
+    // p("<{any}>",.{nref});
+    const c_nref = nref.toOwnedSliceSentinel(0) catch unreachable;
+    mvar.set_ref(c_nref);
     return mvar.v;
 }
 
@@ -164,7 +178,7 @@ const MockVariant = struct {
 };
 
 /// Expands reference to overlap all variants
-fn expand_ref(list: ArrayList(MockVariant)) !ArrayList(u8) {
+fn expand_ref(comptime T: type, list: ArrayList(T)) !ArrayList(u8) {
     const allocator = std.testing.allocator;
     var res = ArrayList(u8).init(allocator);
     // defer res.deinit();
@@ -284,7 +298,7 @@ test "variant ref expansion" {
     p("<{any}>",.{maxpos});
     try expect(maxpos == 17);
 
-    const nref = try expand_ref(list);
+    const nref = try expand_ref(MockVariant,list);
     // defer test_allocator.free(nref);
     // p("<{s}>",.{nref});
     // p("!{s}!",.{nref});

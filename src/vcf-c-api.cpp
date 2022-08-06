@@ -47,3 +47,8 @@ void var_set_id(void *var, const char *id) {
     auto v = static_cast<Variant*>(var);
     v->id = id;
 }
+
+void var_set_ref(void *var, const char *ref) {
+    auto v = static_cast<Variant*>(var);
+    v->ref = ref;
+}
