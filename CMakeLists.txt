@@ -502,6 +502,16 @@ function(add_pydoctest_fullname TEST_FILE)
   )
 endfunction()
 
+function(add_zigtest)
+  add_test(
+    NAME zigvcf
+    COMMAND zig build test
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/src/zig
+    )
+endfunction()
+
+add_zigtest()
+
 add_pytest(realign)
 add_pydoctest(pyvcflib)
 add_pydoctest(vcflib-api)
