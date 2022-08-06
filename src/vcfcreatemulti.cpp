@@ -117,6 +117,9 @@ Variant createMultiallelic_zig(vector<Variant>& vars) {
     Variant nvar = first;
 
     Variant *mvar = (Variant *)zig_create_multi_allelic(&nvar, ptr_vec(vars).data() , vars.size());
+    stringstream s;
+    s << vars.front().position << "-" << vars.back().position;
+    mvar->info["combined"].push_back(s.str());
 
     return *mvar;
 }
