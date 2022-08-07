@@ -43,12 +43,28 @@ const char *var_ref(void *var) {
     return (v->ref.data());
 }
 
+const unsigned long var_alt_num(void *variant) {
+    auto v = static_cast<Variant*>(variant);
+    return v->alt.size();
+}
+
+const char **var_alt(void *variant, const char ** ret) {
+    auto v = static_cast<Variant*>(variant);
+    int idx = 0;
+    for (auto a: v->alt) {
+        cerr << a.data() << endl;
+        ret[idx] = a.data();
+        idx++;
+    }
+    return ret;
+}
+
 void var_set_id(void *var, const char *id) {
     auto v = static_cast<Variant*>(var);
-    v->id = id;
+    v->id = id; // copies content
 }
 
 void var_set_ref(void *var, const char *ref) {
     auto v = static_cast<Variant*>(var);
-    v->ref = ref;
+    v->ref = ref; // copies content
 }

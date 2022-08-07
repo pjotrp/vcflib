@@ -12,6 +12,8 @@ void *var_parse(const char *line, bool parse_samples);
 const char *var_id(void *variant);
 const long var_pos(void *variant);
 const char *var_ref(void *variant);
+const unsigned long var_alt_num(void *variant);
+const char **var_alt(void *variant, const char ** ret);
 
 void var_set_id(void *variant, const char *);
 void var_set_ref(void *variant, const char *);

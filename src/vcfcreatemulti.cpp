@@ -62,6 +62,7 @@ Variant createMultiallelic_legacy(vector<Variant>& vars) {
     int start = first.position;
     string ref = first.ref;
 
+    // expand reference using all references in list
     for (vector<Variant>::iterator v = vars.begin() + 1; v != vars.end(); ++v) {
         int sdiff = (v->position + v->ref.size()) - (start + ref.size());
         int pdiff = (start + ref.size()) - v->position;
@@ -70,11 +71,11 @@ Variant createMultiallelic_legacy(vector<Variant>& vars) {
         }
     }
 
-    // Variant mvar = *zvar;
     Variant mvar = first;
     mvar.alt.clear();
     mvar.ref = ref;
 
+    // Correct alts using the new reference
     for (vector<Variant>::iterator v = vars.begin(); v != vars.end(); ++v) {
         // add alternates and splice them into the reference
         int p5diff = v->position - mvar.position;

@@ -27,6 +27,10 @@ extern fn var_parse(line: [*c] const u8, parse_samples: bool) *anyopaque;
 pub extern fn var_id(* anyopaque) [*c] const u8;
 extern fn var_pos(* anyopaque) u64;
 extern fn var_ref(* anyopaque) [*c] const u8;
+// const char **var_alt(const char ** ret, void *var);
+extern fn var_alt_num(variant: *anyopaque) usize;
+//extern fn var_alt(variant: * anyopaque, buf: [*c] const u8) [*c] const u8;
+extern fn var_alt(variant: * anyopaque, buf: [*c]* anyopaque) [*c]?* anyopaque;
 extern fn var_set_id(?* anyopaque, [*c] const u8) void;
 extern fn var_set_ref(?* anyopaque, [*c] const u8) void;
 extern fn call_c([*] const u8) void;
@@ -41,10 +45,17 @@ const Variant = struct {
 
     const Self = @This();
 
-    pub fn id(self: *const Self) [:0]const u8 {
-        const buf: [*c]const u8 = var_id(self.v);
+    fn to_slice(c_str: [*c] const u8) [:0] const u8 {
+        const buf: [*c]const u8 = c_str;
         const str = std.mem.span(@ptrCast([*:0]const u8, buf));
         return str;
+    }
+
+    pub fn id(self: *const Self) [:0]const u8 {
+        // const buf: [*c]const u8 = var_id(self.v);
+        // const str = std.mem.span(@ptrCast([*:0]const u8, buf));
+        // return str;
+        return to_slice(var_id(self.v));
     }
 
     pub fn pos(self: *const Self) u64 {
@@ -52,9 +63,24 @@ const Variant = struct {
     }
 
     pub fn ref(self: *const Self) [] const u8 {
-        const buf: [*c]const u8 = var_ref(self.v);
-        const str = std.mem.span(@ptrCast([*:0]const u8, buf));
-        return str;
+        // const buf: [*c]const u8 = var_ref(self.v);
+        // const str = std.mem.span(@ptrCast([*:0]const u8, buf));
+        // return str;
+        return to_slice(var_ref(self.v));
+    }
+
+    pub fn alt(self: *const Self) ArrayList([] u8) {
+        var list = ArrayList([] u8).init(test_allocator);
+        const altsize = var_alt_num(self.v);
+        var buffer = test_allocator.alloc(*anyopaque, altsize) catch unreachable;
+        defer test_allocator.free(buffer);
+        const res = var_alt(self.v,@ptrCast([*c]* anyopaque,buffer));
+        var i: usize = 0;
+        while (i < altsize) : (i += 1) {
+                // list.append(buffer[i]) catch unreachable;
+                p("<{d}:{d}><{s}>\n",.{i,altsize,@ptrCast([*:0] const u8,res[i])});
+        }
+        return list;
     }
 
     pub fn set_ref(self: *const Self, nref: [:0] const u8) void {
@@ -116,12 +142,13 @@ export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaq
     // var list = ArrayList(Variant).init(test_allocator);
     var vs = ArrayList(Variant).init(test_allocator);
     var i: usize = 0;
-    while (i < size) : (i += 1) {
+    while (i < size) : (i += 1) { // use index to access *anyopaque
         var v = Variant{.v = varlist[i].?};
         vs.append(v) catch unreachable;
     }
-    const maxpos = refs_maxpos(Variant,vs);
-    p("<{any}>",.{maxpos}); // use to update origin
+
+    // const maxpos = refs_maxpos(Variant,vs);
+    // p("<{any}>",.{maxpos}); // use to update origin
     var nref = expand_ref(Variant,vs) catch unreachable;
     // defer nref.deinit();
     // try expect(nref.items.len == 7);
@@ -129,6 +156,19 @@ export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaq
     // p("<{any}>",.{nref});
     const c_nref = nref.toOwnedSliceSentinel(0) catch unreachable;
     mvar.set_ref(c_nref);
+
+    const first = vs.items[0];
+    const nalt = expand_alt(Variant,first.pos(),c_nref,vs) catch unreachable;
+    defer {
+        for (nalt.items) |item| {
+                item.deinit();
+            }
+        nalt.deinit();
+    }
+    expect(nalt.items.len == 6) catch |e| {
+        p("{e}: {d}",.{e,nalt.items.len});
+    };
+
     return mvar.v;
 }
 
@@ -200,29 +240,24 @@ fn expand_ref(comptime T: type, list: ArrayList(T)) !ArrayList(u8) {
             //           |--->| append |
             //            pdiff
 
-            const sdiff = right1 - right0; // diff between ref0 and ref1 right positions
-            const pdiff = right0 - left1; // diff between ref0 right and ref1 left
-            if (sdiff >= 0) {
+            if (right1 > right0) {
+
+                const sdiff = right1 - right0; // diff between ref0 and ref1 right positions
+                const pdiff = right0 - left1; // diff between ref0 right and ref1 left
                 // newref = ref + append
                 try res.appendSlice(v.ref()[pdiff..pdiff+sdiff]);
-            }
-            else {
-                // We expect slices to move right
-                return VCFError.UnexpectedOrder;
             }
         }
     return res;
 }
 
-fn expand_alt(ref: [] const u8, list: ArrayList(MockVariant)) !ArrayList(ArrayList(u8)) {
-    _ = ref;
+fn expand_alt(comptime T: type, pos: usize, ref: [] const u8, list: ArrayList(T)) !ArrayList(ArrayList(u8)) {
     const allocator = std.testing.allocator;
     // add alternates and splice them into the reference. It does not modify the ref.
-    const first = list.items[0];
+    // const first = list.items[0];
     var nalt = ArrayList(ArrayList(u8)).init(allocator);
     for (list.items) |v| {
-            p("!{s}!\n",.{v.ref()});
-            const p5diff = v.pos() - first.pos(); // always >= 0 - will raise error otherwise
+            const p5diff = v.pos() - pos; // always >= 0 - will raise error otherwise
             const before = ref[0..p5diff]; // leading ref
 
             // ref0 has been expanded in a previous step to cover the full variant.
@@ -244,7 +279,7 @@ fn expand_alt(ref: [] const u8, list: ArrayList(MockVariant)) !ArrayList(ArrayLi
             //   after = ref.substr(ref.size() - p3diff .. end);
             // var after = ArrayList(u8).init(allocator);
             // defer after.deinit();
-            const right0 = first.pos() + first.ref().len;
+            const right0 = pos + ref.len;
             const right1 = v.pos() + v.ref().len;
             const p3diff = if (right0 > right1) right0 - right1 else 0;
             const start  = ref.len - p3diff;
@@ -334,7 +369,7 @@ test "variant alt expansion" {
     try alt3.append(a3[0..]);
     const v3 = MockVariant{ .pos_ = 10, .ref_ = "CC", .alt_ = alt3 };
     try list.append(v3);
-    const nalt = try expand_alt("AAAAACC",list);
+    const nalt = try expand_alt(MockVariant,10,"AAAAACC",list);
     defer {
         for (nalt.items) |item| {
                 item.deinit();
