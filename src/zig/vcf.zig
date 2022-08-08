@@ -96,16 +96,19 @@ const Variant = struct {
 
     pub fn set_alt(self: *const Self, list: ArrayList([:0] const u8)) void {
         // Create ptrlist
-        // var ptrs = test_allocator.alloc(*anyopaque, list.items.len) catch unreachable;
-        // defer test_allocator.free(ptrs);
-        // _ = ptrs;
+        var ptrs = test_allocator.alloc(*anyopaque, list.items.len) catch unreachable;
+        defer test_allocator.free(ptrs);
         _ = self;
+        var i: usize = 0;
         for (list.items) |seq| {
-          p("data: {s}\n",.{seq});
+                p("data: {s} {p} {s}\n",.{seq,&list.items[i],list.items[i]});
+                ptrs[i] = @ptrCast([*:0] u8,&list.items[i]);
+                p("ptrs: {p} {s}\n",.{ptrs[i],@ptrCast([*:0] u8,ptrs[i])});
+                i += 1;
             }
         // p("ptr: {any} {any}",.{&list.items,&list.items[0]});
         // ptrs[0] = @ptrCast(*anyopaque,&list.items[0]);
-        var_set_alt(self.v,@ptrCast(*anyopaque,&list.items[1]),1);
+        var_set_alt(self.v,@ptrCast(*anyopaque,ptrs),list.items.len);
     }
 };
 
