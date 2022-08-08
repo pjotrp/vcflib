@@ -19,6 +19,7 @@ void *zig_variant(void *var) {
 }
 
 void *var_parse(const char *line, bool parse_samples) {
+    cerr << "HHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH" << endl;
     Variant * var = new Variant(); // construct buffer
     // Variant::parse(string& line, bool parseSamples) {
     string s = line;
@@ -70,4 +71,13 @@ void var_set_id(void *var, const char *id) {
 void var_set_ref(void *var, const char *ref) {
     auto v = static_cast<Variant*>(var);
     v->ref = ref; // copies content
+}
+
+void var_set_alt(void *var, const char **alt, long size) {
+    auto v = static_cast<Variant*>(var);
+    // v->ref = ref; // copies content
+    for (int i = 0; i<size; i++) {
+        printf("[C] %p %p\n",alt,alt[i]);
+        printf("[C] %i:%s\n",i,alt[i]);
+    }
 }
