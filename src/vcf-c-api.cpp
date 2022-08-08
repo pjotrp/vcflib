@@ -48,12 +48,15 @@ const unsigned long var_alt_num(void *variant) {
     return v->alt.size();
 }
 
-const char **var_alt(void *variant, const char ** ret) {
+const char **var_alt(void *variant,const char **ret) {
     auto v = static_cast<Variant*>(variant);
     int idx = 0;
-    for (auto a: v->alt) {
-        cerr << a.data() << endl;
-        ret[idx] = a.data();
+    for (auto &a: v->alt) {
+    // auto a = &v->alt[0];
+        ret[idx] = a.c_str();
+        // printf("ptr=%p:%s,%p:%s:\n",a.c_str(),a.c_str(),ret[idx],ret[idx]);
+        // printf("ret=%s,%p,%s\n",ret,*ret,*ret);
+        // break;
         idx++;
     }
     return ret;
