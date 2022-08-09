@@ -33,7 +33,7 @@ extern fn var_alt_num(variant: *anyopaque) usize;
 extern fn var_alt(variant: * anyopaque, buf: [*c]* anyopaque) [*c][*c] const u8;
 extern fn var_set_id(?* anyopaque, [*c] const u8) void;
 extern fn var_set_ref(?* anyopaque, [*c] const u8) void;
-extern fn var_set_alt(?* anyopaque, *anyopaque, usize) void;
+extern fn var_set_alt(?* anyopaque, [*c][*c] const u8, usize) void;
 extern fn call_c([*] const u8) void;
 
 export fn hello_zig2(msg: [*] const u8) [*]const u8 {
@@ -94,7 +94,7 @@ const Variant = struct {
         var_set_ref(self.v,@ptrCast([*c]const u8,nref));
     }
 
-    pub fn set_alt(self: *const Self, list: ArrayList([:0] const u8)) void {
+    pub fn set_alt(self: *const Self, list: ArrayList([*:0] const u8)) void {
         // Create ptrlist
         var ptrs = test_allocator.alloc(*anyopaque, list.items.len) catch unreachable;
         defer test_allocator.free(ptrs);
@@ -102,13 +102,13 @@ const Variant = struct {
         var i: usize = 0;
         for (list.items) |seq| {
                 p("data: {s} {p} {s}\n",.{seq,&list.items[i],list.items[i]});
-                ptrs[i] = @ptrCast([*:0] u8,&list.items[i]);
-                p("ptrs: {p} {s}\n",.{ptrs[i],@ptrCast([*:0] u8,ptrs[i])});
+                ptrs[i] = @ptrCast(*anyopaque,list.items.ptr+i);
+                p("ptrs: {p} {s}\n",.{ptrs[i],@ptrCast([*:0] u8,*ptrs[i])});
                 i += 1;
             }
         // p("ptr: {any} {any}",.{&list.items,&list.items[0]});
         // ptrs[0] = @ptrCast(*anyopaque,&list.items[0]);
-        var_set_alt(self.v,@ptrCast(*anyopaque,ptrs),list.items.len);
+        var_set_alt(self.v,@ptrCast([*c][*c] const u8,ptrs),list.items.len);
     }
 };
 
@@ -271,11 +271,11 @@ fn expand_ref(comptime T: type, list: ArrayList(T)) !ArrayList(u8) {
     return res;
 }
 
-fn expand_alt(comptime T: type, pos: usize, ref: [] const u8, list: ArrayList(T)) !ArrayList([:0] const u8) {
+fn expand_alt(comptime T: type, pos: usize, ref: [] const u8, list: ArrayList(T)) !ArrayList([*:0] const u8) {
     const allocator = std.testing.allocator;
     // add alternates and splice them into the reference. It does not modify the ref.
     // const first = list.items[0];
-    var nalt = ArrayList([:0] const u8).init(allocator);
+    var nalt = ArrayList([*:0] const u8).init(allocator);
     for (list.items) |v| {
             const p5diff = v.pos() - pos; // always >= 0 - will raise error otherwise
             const before = ref[0..p5diff]; // leading ref

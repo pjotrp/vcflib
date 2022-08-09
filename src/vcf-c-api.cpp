@@ -73,7 +73,7 @@ void var_set_ref(void *var, const char *ref) {
     v->ref = ref; // copies content
 }
 
-void var_set_alt(void *var, const char **alt, long size) {
+void var_set_alt(void *var, const void **alt, long size) {
     auto v = static_cast<Variant*>(var);
     // v->ref = ref; // copies content
     for (int i = 0; i<size; i++) {
