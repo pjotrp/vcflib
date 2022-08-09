@@ -30,10 +30,11 @@ extern fn var_ref(* anyopaque) [*c] const u8;
 // const char **var_alt(const char ** ret, void *var);
 extern fn var_alt_num(variant: *anyopaque) usize;
 //extern fn var_alt(variant: * anyopaque, buf: [*c] const u8) [*c] const u8;
+extern fn var_clear_alt(variant: *anyopaque) void;
 extern fn var_alt(variant: * anyopaque, buf: [*c]* anyopaque) [*c][*c] const u8;
 extern fn var_set_id(?* anyopaque, [*c] const u8) void;
 extern fn var_set_ref(?* anyopaque, [*c] const u8) void;
-extern fn var_set_alt(?* anyopaque, [*c][*c] const u8, usize) void;
+extern fn var_set_alt(?* anyopaque, [*c] const u8, usize) void;
 extern fn call_c([*] const u8) void;
 
 export fn hello_zig2(msg: [*] const u8) [*]const u8 {
@@ -94,21 +95,13 @@ const Variant = struct {
         var_set_ref(self.v,@ptrCast([*c]const u8,nref));
     }
 
-    pub fn set_alt(self: *const Self, list: ArrayList([*:0] const u8)) void {
+    pub fn set_alt(self: *const Self, nalt: ArrayList([*:0] const u8)) void {
         // Create ptrlist
-        var ptrs = test_allocator.alloc(*anyopaque, list.items.len) catch unreachable;
-        defer test_allocator.free(ptrs);
-        _ = self;
+        var_clear_alt(self.v);
         var i: usize = 0;
-        for (list.items) |seq| {
-                p("data: {s} {p} {s}\n",.{seq,&list.items[i],list.items[i]});
-                ptrs[i] = @ptrCast(*anyopaque,list.items.ptr+i);
-                p("ptrs: {p} {s}\n",.{ptrs[i],@ptrCast([*:0] u8,*ptrs[i])});
-                i += 1;
+        while (i < nalt.items.len) : (i += 1) {
+                var_set_alt(self.v,nalt.items[i],i);
             }
-        // p("ptr: {any} {any}",.{&list.items,&list.items[0]});
-        // ptrs[0] = @ptrCast(*anyopaque,&list.items[0]);
-        var_set_alt(self.v,@ptrCast([*c][*c] const u8,ptrs),list.items.len);
     }
 };
 
@@ -163,7 +156,6 @@ export fn zig_create_multi_allelic2(variant: ?*anyopaque, varlist: [*c]?* anyopa
 export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaque, size: usize) *anyopaque {
     _ = size;
     var mvar = Variant{.v = variant.?};
-    // var list = ArrayList(Variant).init(test_allocator);
     var vs = ArrayList(Variant).init(test_allocator);
     var i: usize = 0;
     while (i < size) : (i += 1) { // use index to access *anyopaque
@@ -171,22 +163,14 @@ export fn zig_create_multi_allelic(variant: ?*anyopaque, varlist: [*c]?* anyopaq
         vs.append(v) catch unreachable;
     }
 
-    // const maxpos = refs_maxpos(Variant,vs);
-    // p("<{any}>",.{maxpos}); // use to update origin
     var nref = expand_ref(Variant,vs) catch unreachable;
-    // defer nref.deinit();
-    // try expect(nref.items.len == 7);
-    // try expect(std.mem.eql(u8, nref.items, "AAAAACC"));
-    // p("<{any}>",.{nref});
+    defer nref.deinit();
     const c_nref = nref.toOwnedSliceSentinel(0) catch unreachable;
     mvar.set_ref(c_nref);
 
     const first = vs.items[0];
     const nalt = expand_alt(Variant,first.pos(),c_nref,vs) catch unreachable;
     defer nalt.deinit();
-    expect(nalt.items.len == 6) catch |e| {
-         p("{e}: {d}",.{e,nalt.items.len});
-    };
     mvar.set_alt(nalt);
 
     return mvar.v;
@@ -283,6 +267,12 @@ fn expand_alt(comptime T: type, pos: usize, ref: [] const u8, list: ArrayList(T)
             // ref0 has been expanded in a previous step to cover the full variant.
             // the original code only deals with p3diff > 0.
             //
+            // SNP
+            //            ref
+            // ref0     |AAAAAAAA|
+            //        p5diff    p3diff = +3
+            // SNP           C--->
+            //
             // Insertion:
             //            ref
             // ref0     |AAAAA|------->|
@@ -295,27 +285,27 @@ fn expand_alt(comptime T: type, pos: usize, ref: [] const u8, list: ArrayList(T)
             //        p5diff    p3diff = +2 (start = 5-2 = 3
             // ref1      |AA|--
 
-            // if (p3diff > 0 && p3diff < mvar.ref.size()) {
-            //   after = ref.substr(ref.size() - p3diff .. end);
-            // var after = ArrayList(u8).init(allocator);
-            // defer after.deinit();
             const right0 = pos + ref.len;
             const right1 = v.pos() + v.ref().len;
-            const p3diff = if (right0 > right1) right0 - right1 else 0;
-            const start  = ref.len - p3diff;
+            const p3diff:i64 = @intCast(i64,right0) - @intCast(i64,right1);
 
-            const after =
-                if (p3diff > 0 and p3diff < v.ref().len) ref[start..]
-                else "";
+            var after: [] const u8 = undefined;
+            if (p3diff > 0 and p3diff < ref.len) {
+                const last  = ref.len - @intCast(usize,p3diff);
+                after = ref[last..];
+            }
+            else
+                after = "";
             for (v.alt().items) | alt | {
                     var new = ArrayList(u8).init(allocator);
-                    // defer new.deinit();
+                    defer new.deinit();
                     if (p3diff != 0 or p5diff != 0) {
+                        // p("{any}-{s},{s}\n",.{p3diff,before,after});
                         try new.appendSlice(before);
                         try new.appendSlice(alt);
                         try new.appendSlice(after);
                         try nalt.append(new.toOwnedSliceSentinel(0) catch unreachable);
-                        p("new alt={s}\n",.{new.items});
+                        // p("new alt={s}\n",.{new.items});
                     } else {
                         try new.appendSlice(alt);
                         try nalt.append(new.toOwnedSliceSentinel(0) catch unreachable);
@@ -393,7 +383,9 @@ test "variant alt expansion" {
     const v3 = MockVariant{ .pos_ = 10, .ref_ = "CC", .alt_ = alt3 };
     try list.append(v3);
     const nalt = try expand_alt(MockVariant,10,"AAAAACC",list);
-    defer nalt.deinit();
+    defer {
+        nalt.deinit();
+    }
     expect(nalt.items.len == 3) catch |e| {
         p("{e}: {d}",.{e,nalt.items.len});
         return;

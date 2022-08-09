@@ -17,7 +17,8 @@ const char **var_alt(void *variant, const char ** ret);
 
 void var_set_id(void *variant, const char *);
 void var_set_ref(void *variant, const char *);
-void var_set_alt(void *var, const void **alt, long size);
+void var_clear_alt(void *var);
+void var_set_alt(void *var, const char *alt, long idx);
 
 // Zig functionality
 

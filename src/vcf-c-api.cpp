@@ -73,11 +73,14 @@ void var_set_ref(void *var, const char *ref) {
     v->ref = ref; // copies content
 }
 
-void var_set_alt(void *var, const void **alt, long size) {
+void var_clear_alt(void *var) {
+    auto v = static_cast<Variant*>(var);
+    v->alt.clear();
+}
+
+void var_set_alt(void *var, const char *alt, long idx) {
     auto v = static_cast<Variant*>(var);
     // v->ref = ref; // copies content
-    for (int i = 0; i<size; i++) {
-        printf("[C] %p %p\n",alt,alt[i]);
-        printf("[C] %i:%s\n",i,alt[i]);
-    }
+    // printf("[C] %s\n",alt);
+    v->alt.push_back(alt);
 }
