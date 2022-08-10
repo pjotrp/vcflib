@@ -95,12 +95,12 @@ const Variant = struct {
         var_set_ref(self.v,@ptrCast([*c]const u8,nref));
     }
 
-    pub fn set_alt(self: *const Self, nalt: ArrayList([*:0] const u8)) void {
+    pub fn set_alt(self: *const Self, nalt: ArrayList([] const u8)) void {
         // Create ptrlist
         var_clear_alt(self.v);
         var i: usize = 0;
         while (i < nalt.items.len) : (i += 1) {
-                var_set_alt(self.v,nalt.items[i],i);
+                var_set_alt(self.v,@ptrCast([*c] const u8,nalt.items[i]),i);
             }
     }
 };
@@ -255,11 +255,11 @@ fn expand_ref(comptime T: type, list: ArrayList(T)) !ArrayList(u8) {
     return res;
 }
 
-fn expand_alt(comptime T: type, pos: usize, ref: [] const u8, list: ArrayList(T)) !ArrayList([*:0] const u8) {
-    const allocator = std.testing.allocator;
+fn expand_alt(comptime T: type, pos: usize, ref: [] const u8, list: ArrayList(T)) !ArrayList([] const u8) {
+    // const allocator = std.testing.allocator;
     // add alternates and splice them into the reference. It does not modify the ref.
     // const first = list.items[0];
-    var nalt = ArrayList([*:0] const u8).init(allocator);
+    var nalt = ArrayList([] const u8).init(test_allocator);
     for (list.items) |v| {
             const p5diff = v.pos() - pos; // always >= 0 - will raise error otherwise
             const before = ref[0..p5diff]; // leading ref
@@ -297,18 +297,18 @@ fn expand_alt(comptime T: type, pos: usize, ref: [] const u8, list: ArrayList(T)
             else
                 after = "";
             for (v.alt().items) | alt | {
-                    var new = ArrayList(u8).init(allocator);
-                    defer new.deinit();
+                    var n = try ArrayList(u8).initCapacity(test_allocator,2000);
+                    defer n.deinit();
                     if (p3diff != 0 or p5diff != 0) {
                         // p("{any}-{s},{s}\n",.{p3diff,before,after});
-                        try new.appendSlice(before);
-                        try new.appendSlice(alt);
-                        try new.appendSlice(after);
-                        try nalt.append(new.toOwnedSliceSentinel(0) catch unreachable);
+                        try n.appendSlice(before);
+                        try n.appendSlice(alt);
+                        try n.appendSlice(after);
+                        try nalt.append(n.items);
                         // p("new alt={s}\n",.{new.items});
                     } else {
-                        try new.appendSlice(alt);
-                        try nalt.append(new.toOwnedSliceSentinel(0) catch unreachable);
+                        try n.appendSlice(alt);
+                        try nalt.append(n.items);
                     }
             }
         }
@@ -332,7 +332,7 @@ test "variant ref expansion" {
 }
 
 test "mock variant" {
-    var list = std.ArrayList(MockVariant).init(std.testing.allocator);
+    var list = ArrayList(MockVariant).init(std.testing.allocator);
     defer list.deinit();
 
     const v1 = MockVariant{ .pos_ = 10, .ref_ = "AAAA" };
