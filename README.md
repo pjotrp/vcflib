@@ -16,7 +16,7 @@ Garrison E, Kronenberg ZN, Dawson ET, Pedersen BS, Prins P (2022), PLoS Comput B
 
 ![Humpty Logo - CC0 license](./logos/humpty-dumpty.jpg)
 
-**April 2025**: fixes, updates and downloadable binaries. See [v1.0.13 release](https://github.com/vcflib/vcflib/releases/tag/v1.0.13).
+**May 2025**: fixes, updates and downloadable binaries. See [RELEASE_NOTES.md](./RELEASE_NOTES.md)
 
 **November 2024**: a fresh release with, mostly, pangenome related fixes.
 
