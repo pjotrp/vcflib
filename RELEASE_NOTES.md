@@ -14,7 +14,7 @@ and
 
 ## ChangeLog ongoing
 
-## ChangeLog v1.0.14 (20250517)
+## ChangeLog v1.0.14 (20250518)
 
 * CMake: Fixed building static libs and shared libs (the previous version just compiled a static lib)
 * Updated zig compile for 0.14 (MichaelK)
