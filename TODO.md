@@ -34,3 +34,24 @@
   and have their tests disabled.
 
 For Debian/Ubuntu packages: we use [guix.scm](./guix.scm) for development and deployment. We also have a passing github CI test defined in [ci_test.yaml](.github/workflows/ci_test.yml).
+
+
+# Git submodules
+
+vcflib has the following submodules that are optionally used:
+
+  - fastahack -- system package
+  - smithwaterman -- system package
+  - htslib (via tabixpp) -- system package
+  - tabixpp -- system package
+  - WFA2-lib -- system package (wfa2-lib)
+
+The following small and stable submodules are *always* used:
+
+  - fsom -- no system package, small vendored lib
+  - filevercmp -- no system package, small vendored lib
+  - c-progress-bar -- no system package, small vendored lib
+  - intervaltree -- header-only, no system package
+  - multichoose -- header-only
+  - libVCFH -- header-only
+  - simde -- header-only SIMD everywhere
