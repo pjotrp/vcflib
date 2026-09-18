@@ -468,6 +468,12 @@ if (NOT BUILD_ONLY_LIB)
   endif()
   install(TARGETS ${BINS} ${WFBINS} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
+  # ---- vcfputtogetheragain: plain C alternative to the zig
+  # implementation of vcfcreatemulti. Standalone C, no vcflib/zig
+  # linkage.
+  add_executable(vcfputtogetheragain src/vcfputtogetheragain.c)
+  install(TARGETS vcfputtogetheragain RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
   # ---- Copy scripts
   foreach(SCRIPT ${SCRIPTS})
     install(PROGRAMS ./scripts/${SCRIPT} DESTINATION ${CMAKE_INSTALL_BINDIR} RENAME ${SCRIPT})
@@ -544,6 +550,7 @@ add_pydoctest(vcffilter)
 if (ZIG)
   add_pydoctest(vcfcreatemulti)
 endif (ZIG)
+add_pydoctest(vcfputtogetheragain)
 
 add_pydoctest(vcfnulldotslashdot)
 add_doctest(doc/vcfintersect)
