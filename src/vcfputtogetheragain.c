@@ -43,6 +43,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "vcf-std.h"
+
 /* zig: samples.zig "const GENOTYPE_MISSING = -256;" - a sentinel that
    cannot collide with a real allele index */
 #define GENOTYPE_MISSING (-256)
@@ -740,12 +742,14 @@ int main(int argc, char **argv) {
     char *buf = NULL;
     size_t cap = 0;
     ssize_t len;
+    long lineno = 0;
 
     Rec **vars = NULL;
     int nvars = 0, capvars = 0;
     char *last_seq = NULL;
 
     while ((len = getline(&buf, &cap, fp)) != -1) {
+        lineno++;
         /* header lines pass through; add the INFO definitions that
            vcfcreatemulti.cpp registers via variantFile.addHeaderLine() */
         if (len > 0 && (buf[0] == '#' || buf[0] == '\n' || buf[0] == '\r')) {
@@ -756,6 +760,15 @@ int main(int argc, char **argv) {
             }
             fputs(buf, stdout);
             continue;
+        }
+        /* strict VCFv4.5 field validation - a malformed line is a hard
+           error; malformed data is never passed into the merger */
+        vcfstd_error err;
+        if (vcfstd_validate_record(buf, &err) != VCFSTD_OK) {
+            char msg[512];
+            vcfstd_error_string(&err, msg, sizeof(msg));
+            fprintf(stderr, "ERROR: invalid VCF data line %ld: %s\n  line: %s", lineno, msg, buf);
+            return 1;
         }
         Rec *r = rec_new(strdup(buf));
 

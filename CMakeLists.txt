@@ -470,8 +470,8 @@ if (NOT BUILD_ONLY_LIB)
 
   # ---- vcfputtogetheragain: plain C alternative to the zig
   # implementation of vcfcreatemulti. Standalone C, no vcflib/zig
-  # linkage.
-  add_executable(vcfputtogetheragain src/vcfputtogetheragain.c)
+  # linkage. Uses vcf-std for strict VCFv4.5 field validation.
+  add_executable(vcfputtogetheragain src/vcfputtogetheragain.c src/vcf-std.c)
   install(TARGETS vcfputtogetheragain RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
   # ---- Copy scripts
@@ -483,6 +483,11 @@ endif()
 
 if (NOT BUILD_STATIC) # only when not building static
   # ---- Python bindings - mostly for testing at this stage
+  if (pybind11_FOUND)
+    # pyvcfstd: bindings for the standalone VCFv4.5 field validator
+    pybind11_add_module(pyvcfstd "${CMAKE_SOURCE_DIR}/src/pyvcfstd.cpp" "${CMAKE_SOURCE_DIR}/src/vcf-std.c")
+    install(TARGETS pyvcfstd LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  endif()
   pybind11_add_module(pyvcflib "${CMAKE_SOURCE_DIR}/src/pythonffi.cpp")
   # add_dependencies(pyvcflib CURL::libcurl)
   target_link_libraries(pyvcflib PUBLIC vcflib ${vcflib_LIBS} ${WFALIB})
@@ -551,6 +556,7 @@ if (ZIG)
   add_pydoctest(vcfcreatemulti)
 endif (ZIG)
 add_pydoctest(vcfputtogetheragain)
+add_pydoctest(vcf-std)
 
 add_pydoctest(vcfnulldotslashdot)
 add_doctest(doc/vcfintersect)
