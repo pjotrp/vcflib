@@ -2,7 +2,7 @@
     vcfputtogetheragain - plain C alternative to the zig implementation of
     vcfcreatemulti.
 
-    Copyright 2025 vcflib contributors. MIT licensed.
+    Copyright 2026 vcflib contributors. MIT licensed.
 
     Go through a sorted VCF and when overlapping alleles are represented
     across multiple records, merge them into a single multi-ALT record -

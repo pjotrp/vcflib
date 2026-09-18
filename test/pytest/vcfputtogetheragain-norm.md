@@ -56,4 +56,4 @@ vcfvalidate: checked 3 records, found 0 error(s)
 
 # LICENSE
 
-Copyright 2025 (C) Pjotr Prins and vcflib contributors. MIT licensed.
+Copyright 2026 (C) Pjotr Prins and vcflib contributors. MIT licensed.

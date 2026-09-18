@@ -174,4 +174,4 @@ sits on a MULTI=ALTPROBLEM record:
 
 # LICENSE
 
-Copyright 2025 (C) Erik Garrison, Pjotr Prins and vcflib contributors. MIT licensed.
+Copyright 2026 (C) Erik Garrison, Pjotr Prins and vcflib contributors. MIT licensed.

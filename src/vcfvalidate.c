@@ -1,7 +1,7 @@
 /*
     vcfvalidate - VCFv4.5 data line validator.
 
-    Copyright 2025 vcflib contributors. MIT licensed.
+    Copyright 2026 vcflib contributors. MIT licensed.
 
     Checks every data line of a VCF file against the field rules of the
     VCFv4.5 specification (see src/vcf-std.c) and reports descriptive,

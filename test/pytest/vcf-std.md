@@ -313,4 +313,4 @@ ValueError: ALT: malformed field
 
 # LICENSE
 
-Copyright 2025 (C) Pjotr Prins and vcflib contributors. MIT licensed.
+Copyright 2026 (C) Pjotr Prins and vcflib contributors. MIT licensed.
