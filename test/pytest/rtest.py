@@ -51,14 +51,23 @@ def run_stdout(cmd, ext = "vcf", uniq = None):
     # pp.pprint(inspect.getouterframes(curframe))
     # print("------------n")
     calframe = inspect.getouterframes(curframe, 1)
-    p = re.compile('\[([0-9])\]')
-    index = p.findall(calframe[1].filename)[0]
+    fn = calframe[1].filename
+    p = re.compile(r'\[([0-9]+)\]')
+    m = p.findall(fn)
+    index = m[-1] if m else "0"
 
-    name = calframe[1].filename[0:-4]
-    if "doctest" in name:
-        name = name[9:-3]
+    # doctest filenames look like "<doctest vcfcreatemulti.md[10]>"; the
+    # original [0:-4]/[9:-3] arithmetic only worked for single-digit example
+    # numbers. Parse the module name robustly instead.
+    m2 = re.match(r'^<doctest (.+)\[[0-9]+\]>$', fn)
+    if m2:
+        name = re.sub(r'\.md$', '', m2.group(1))
     else:
-        name = name[18:-1]
+        name = fn[0:-4]
+        if "doctest" in name:
+            name = name[9:-3]
+        else:
+            name = name[18:-1]
 
     if uniq:
         name += "_"+str(uniq)

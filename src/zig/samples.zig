@@ -71,6 +71,11 @@ const Genotypes = struct {
             std.mem.split(u8, str, if (is_phased(str)) '|' else '/' );
 
         while (splits.next()) |chunk| {
+            if (chunk.len == 0) {
+                std.debug.print("WARNING: empty genotype field encountered, treating as missing ('.')\n", .{});
+                list.append(allocator, GENOTYPE_MISSING) catch unreachable;
+                continue;
+            }
             const i: i64 =
                 if (chunk[0] == '.')
                 GENOTYPE_MISSING

@@ -179,6 +179,47 @@ output in <a href="../data/regression/vcfcreatemulti_3.vcf">vcfcreatemulti_3.vcf
 
 ```
 
+Expand the test set with extra inputs: a minimalised record from
+[vcflib issue 354](https://github.com/vcflib/vcflib/issues/354) (a
+vcfwave output with an incomplete TYPE field) and three sample files
+with overlapping/duplicate records:
+
+```
+
+# minimalised repro from https://github.com/vcflib/vcflib/issues/354
+>>> run_stdout("vcfcreatemulti ../test/data/inputs/issue354-type.vcf", ext="vcf", uniq=4)
+output in <a href="../data/regression/vcfcreatemulti_4.vcf">vcfcreatemulti_4.vcf</a>
+
+# duplicate records at the same position (emits MULTI=ALTPROBLEM warning)
+>>> run_stdout("vcfcreatemulti ../samples/test-dup.vcf", ext="vcf", uniq=5)
+output in <a href="../data/regression/vcfcreatemulti_5.vcf">vcfcreatemulti_5.vcf</a>
+
+# multi-allelic duplicates at the same position (emits MULTI=ALTPROBLEM warning)
+>>> run_stdout("vcfcreatemulti ../samples/test-multi.vcf", ext="vcf", uniq=6)
+output in <a href="../data/regression/vcfcreatemulti_6.vcf">vcfcreatemulti_6.vcf</a>
+
+# a vcfwave-disassembled complex region
+>>> run_stdout("vcfcreatemulti ../samples/10158243.vcf", ext="vcf", uniq=7)
+output in <a href="../data/regression/vcfcreatemulti_7.vcf">vcfcreatemulti_7.vcf</a>
+
+# overlapping SNP + multi-allelic insertion records from scaffold612 -
+# regression test for a use-after-free in the C-to-zig genotype API
+# (var_geno copied the C++ samples map, leaving zig with dangling pointers)
+>>> run_stdout("vcfcreatemulti ../test/data/inputs/issue-scaffold612-mini.vcf", ext="vcf", uniq=9)
+output in <a href="../data/regression/vcfcreatemulti_9.vcf">vcfcreatemulti_9.vcf</a>
+
+# larger extract of the scaffold612 region that crashed vcfcreatemulti
+# before the var_geno fix (test/data/inputs/scaffold612-uaf-region.vcf)
+>>> run_stdout("vcfcreatemulti ../test/data/inputs/scaffold612-uaf-region.vcf", ext="vcf", uniq=8)
+output in <a href="../data/regression/vcfcreatemulti_8.vcf">vcfcreatemulti_8.vcf</a>
+
+```
+
+Note that `samples/scaffold612.phased.vcf` used to crash
+vcfcreatemulti with a zig `index out of bounds` panic. This was
+tracked down to a use-after-free in `var_geno` (see git history) and
+fixed. The two regression tests above (uniq=8,9) cover that region.
+
 Check if the legacy version is still the same. Note it only retains the first genotype and has duplicate 'CC' alt alleles. INFO fields are not correct either.
 
 ```python

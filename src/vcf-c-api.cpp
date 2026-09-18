@@ -115,14 +115,20 @@ const unsigned long var_samples_num(void *var) {
 
 const char **var_geno(void *var, const char **ret) {
     auto v = static_cast<Variant*>(var);
-    auto samples = v->samples;
+    // NOTE: take a reference, not a copy! The returned pointers point into
+    // the variant's sample strings and must remain valid after this call.
+    // A previous `auto samples = v->samples;` copy was destroyed on return,
+    // leaving zig with dangling pointers (intermittent empty genotypes and
+    // crashes in vcfcreatemulti).
+    const auto& samples = v->samples;
     int idx = 0;
     for (const auto& sname: v->sampleNames) {
-        // cout << sname ;
-        // cout << samples[sname]["GT"].front() << endl;
-
-        // printf("<%s>\n",samples[sname]["GT"].front());
-        ret[idx] = samples[sname]["GT"].front().data();
+        auto& gt = samples.at(sname).at("GT");
+        if (gt.empty()) {
+            ret[idx] = ".";
+        } else {
+            ret[idx] = gt.front().data();
+        }
         idx++;
     }
     return ret;
