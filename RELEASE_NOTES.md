@@ -5,6 +5,11 @@ and
 
 ## ChangeLog ongoing
 
+* Added vcfputtogetheragain, a plain C alternative to the zig implementation of vcfcreatemulti: merges overlapping records back into multi-allelic ones with genotype renumbering (the "put Humpty Dumpty together again" companion to vcfwave). No C++ or zig dependency, ~200x faster on large VCFs, and passes through non-overlapping records verbatim
+* Fixed a use-after-free in the C-to-zig API (var_geno copied the C++ samples map, leaving the zig code with dangling pointers) that crashed vcfcreatemulti with a zig "index out of bounds" panic on files with overlapping multi-allelic records (e.g. samples/scaffold612.phased.vcf); the legacy C++ path was unaffected
+* Added vcf-std, a dependency-free plain C library for strict VCFv4.5 field validation (fixed fields, INFO, FORMAT/sample columns, GT grammar) with descriptive, spec-referencing error messages; vcfputtogetheragain validates every record and --validate enables the expensive per-sample checks
+* Added pyvcfstd pybind11 bindings and 91 doctests covering the VCF standard field rules; expanded vcfcreatemulti/vcfputtogetheragain regression tests (2 -> 15 cases, including repros from GitHub issue #354 and the scaffold612 crash region)
+* Zig is now optional and disabled by default: NO_ZIG=ON means vcfcreatemulti falls back to its legacy C++ implementation; build the zig code with -DNO_ZIG=OFF (or -DZIG=ON)
 * Added guix-container-manifest.scm that allows building Singularity and Docker containers(!)
 
 ## ChangeLog v1.0.15 (20260319)

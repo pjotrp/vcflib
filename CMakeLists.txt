@@ -36,7 +36,18 @@ option(OPENMP "Enable OpenMP" ON) # disabling does not work because of vcfwave
 option(PROFILING "Enable profiling" OFF)
 option(GPROF "Enable gprof profiling" OFF)
 option(ASAN "Use address sanitiser" OFF)
-option(ZIG "Set to OFF to disable the zig code" ON)
+# Zig is optional and disabled by default: vcfcreatemulti falls back to
+# its legacy C++ implementation (NO_ZIG). Enable the zig code with
+# -DNO_ZIG=OFF (vcfputtogetheragain provides a plain C alternative).
+option(NO_ZIG "Set to OFF to build the zig code for vcfcreatemulti (default ON)" ON)
+option(ZIG "Set to ON to force building the zig code (overrides NO_ZIG)" OFF)
+if (ZIG)
+  # forced on with -DZIG=ON
+elseif (NO_ZIG)
+  set(ZIG OFF)
+else()
+  set(ZIG ON)
+endif()
 option(WFA_GITMODULE "Force local git submodule for WFA2LIB" OFF) # disabled by default now
 include(CheckIPOSupported) # adds lto
 check_ipo_supported(RESULT ipo_supported OUTPUT output)
