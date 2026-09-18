@@ -7,16 +7,33 @@
     Go through a sorted VCF and when overlapping alleles are represented
     across multiple records, merge them into a single multi-ALT record -
     the "put Humpty Dumpty together again" companion to vcfwave. This is
-    a reimplementation of the zig code path of vcfcreatemulti
-    (src/zig/vcf.zig, src/zig/samples.zig) in plain C, without C++ or
-    zig dependencies:
+    a reimplementation of the zig code path of vcfcreatemulti in plain C,
+    without C++ or zig dependencies.
 
-    - the reference is expanded so it covers all overlapping variants
-    - ALT alleles are spliced into the expanded reference
-    - INFO values of AN,AT,AC,AF,INV,TYPE are concatenated
-    - sample genotypes are merged and allele numbers renumbered; on
-      conflicts the record is marked MULTI=ALTPROBLEM
-    - the merged range is tracked in INFO combined=POS-POS
+    ANNOTATION: correspondence with the original implementation
+    ----------------------------------------------------------
+    The zig version is split over three layers; this file follows the
+    same decomposition. Map of this file to the original sources:
+
+      C (this file)                     original
+      ------------------------------    ---------------------------------
+      GENOTYPE_MISSING, gt_parse,       src/zig/samples.zig
+        gt_renumber, gt_merge,            GENOTYPE_MISSING, Genotypes
+        gt_to_s                           (to_num/init/renumber/merge/to_s)
+      sample_gt, sample_field           src/zig/vcf.zig Variant.genotypes
+                                        + src/vcf-c-api.cpp var_geno
+      expand_ref, expand_alt,           src/zig/vcf.zig
+        expand_info                       expand_ref/expand_alt/expand_info
+      print_merged                      src/vcfcreatemulti.cpp
+                                          createMultiallelic_zig +
+                                          zig_create_multi_allelic_inner
+                                        + src/zig/vcf.zig
+                                          zig_create_multi_allelic_inner
+      main window loop                  src/vcfcreatemulti.cpp main()
+      INFO output ordering              src/Variant.cpp Variant::write
+
+    Deliberate differences from the zig code are marked with
+    "DIFFERENCE:" in the comments below.
 
     Type: transformation
 */
@@ -26,11 +43,23 @@
 #include <stdlib.h>
 #include <string.h>
 
+/* zig: samples.zig "const GENOTYPE_MISSING = -256;" - a sentinel that
+   cannot collide with a real allele index */
 #define GENOTYPE_MISSING (-256)
 
+/* zig: vcf.zig keeps a global "warnings" StringHashMap so each warning
+   is printed only once, from C++ via zig_display_warnings() at exit.
+   The static flags below do the same deduplication. */
 static int warned_multialt = 0;
 static int warned_altproblem = 0;
 
+/* zig: vcf.zig expand_alt() on a multi-allelic record:
+       if (v.alt().items.len > 1) {
+           warning("This code only supports one ALT allele per record: bailing out\n"
+                   "Try normalising the data with `bcftools norm -m-`") catch unreachable;
+           continue;
+       }
+   Same message, same single-shot deduplication. */
 static void warn_multialt(void) {
     if (!warned_multialt) {
         warned_multialt = 1;
@@ -40,6 +69,8 @@ static void warn_multialt(void) {
     }
 }
 
+/* zig: samples.zig Genotypes.merge() warning:
+       try warning("Too many ALT alleles to fit in sample(s) - record marked with MULTI=ALTPROBLEM"); */
 static void warn_altproblem(void) {
     if (!warned_altproblem) {
         warned_altproblem = 1;
@@ -150,7 +181,8 @@ static int info_has_key(const char *info, const char *key) {
 }
 
 /* ------------------------------------------------------------------ */
-/* genotype helpers (mirrors src/zig/samples.zig) */
+/* genotype helpers - a 1:1 port of the Genotypes struct in
+   src/zig/samples.zig */
 
 typedef struct {
     int *a;      /* allele indices, GENOTYPE_MISSING for '.' */
@@ -158,6 +190,15 @@ typedef struct {
     int  phased;
 } GT;
 
+/* zig: samples.zig Genotypes.to_num() + init(): splits a GT string on
+   '|' (phased) or '/' (unphased) into allele numbers.
+
+   DIFFERENCE: zig indexes the first byte of each chunk unprotected -
+   "if (chunk[0] == '.')" - which panicked with "index out of bounds:
+   index 0, len 0" on an empty genotype string (this was the visible
+   crash of the var_geno use-after-free bug, see git history). Our
+   defensive patch treats an empty chunk as missing; here the same
+   handling is built in for *p == 0. */
 static GT gt_parse(const char *s) {
     GT g = {0};
     g.phased = strchr(s, '|') != NULL;
@@ -168,8 +209,8 @@ static GT gt_parse(const char *s) {
     while (1) {
         int v;
         if (*p == 0 || *p == '.' || *p == '|' || *p == '/') {
-            /* empty field or '.': missing (zig panics on empty, we
-               treat it as missing - see samples.zig to_num) */
+            /* '.' or empty field: missing (zig: "if (chunk[0] == '.')
+               GENOTYPE_MISSING else parseInt"); we also accept empty */
             v = GENOTYPE_MISSING;
             if (*p == '.') p++;
         } else {
@@ -185,7 +226,20 @@ static GT gt_parse(const char *s) {
     return g;
 }
 
-/* add offset idx to all called alleles (0 and . unchanged) */
+/* zig: samples.zig Genotypes.renumber():
+       fn renumber(self: *const Self, idx: usize) !void {
+           var list = self.genos;
+           for (list.items,0..) | g,i | {
+               list.items[i] =
+                   switch (g) {
+                       0 => 0,
+                       GENOTYPE_MISSING => GENOTYPE_MISSING,
+                       else => g+@as(i64,@intCast(idx))
+                   };
+           }
+       }
+   Adds the variant's index in the window to every called allele, so
+   allele 1 of window variant i points at merged ALT i+1. */
 static void gt_renumber(GT *g, int idx) {
     for (int i = 0; i < g->n; i++) {
         if (g->a[i] != 0 && g->a[i] != GENOTYPE_MISSING)
@@ -193,7 +247,20 @@ static void gt_renumber(GT *g, int idx) {
     }
 }
 
-/* merge g2 into base; returns 1 on conflict (both called, different) */
+/* zig: samples.zig Genotypes.merge():
+       for (genos2.genos.items,0..) | g2,i | {
+           if (i >= base.items.len) break; // size mismatch guard
+           const current = base.items[i];
+           if (g2 == 0 or g2 == GENOTYPE_MISSING) continue; // no update
+           if (current>0) {
+               try warning("Too many ALT alleles to fit in sample(s) - record marked with MULTI=ALTPROBLEM");
+               g_err = error.MultiAltSNPProblem;
+           }
+           base.items[i] = g2;
+       }
+   Note the zig conflict rule: it fires whenever both alleles are
+   called (current>0), even if they are equal. We return 1 under the
+   same condition; the caller turns it into MULTI=ALTPROBLEM. */
 static int gt_merge(GT *base, const GT *g2) {
     int problem = 0;
     int n = base->n < g2->n ? base->n : g2->n;
@@ -205,6 +272,10 @@ static int gt_merge(GT *base, const GT *g2) {
     return problem;
 }
 
+/* zig: samples.zig Genotypes.to_s(): joins alleles with the phase
+   separator ('|' or '/'), printing GENOTYPE_MISSING as '.'. The zig
+   version appends a separator after every allele and then drops the
+   trailing one; here we simply join. */
 static void gt_free(GT *g) { free(g->a); }
 
 static char *gt_to_s(const GT *g) {
@@ -219,7 +290,21 @@ static char *gt_to_s(const GT *g) {
     return b.s;
 }
 
-/* extract the GT subfield of a sample column, given the FORMAT keys */
+/* zig: vcf.zig Variant.genotypes() calls into C++ via the C API:
+       const size = var_samples_num(self.v);
+       const buffer = allocator.alloc(*anyopaque, size);
+       const res = var_geno(self.v, buffer);
+       ...res[i] -> to_slice(s) -> list
+   var_geno() (src/vcf-c-api.cpp) walks v->sampleNames and returns
+   samples[sname]["GT"].front() for each sample.
+
+   HISTORY: var_geno() used to take the samples map BY VALUE, so the
+   returned char* pointers dangled after the call - the root cause of
+   the scaffold612 crash. Fixed to a reference; here we read the GT
+   field directly from the record line, so no such hazard exists.
+
+   Missing GT (FORMAT without GT, or a short sample column) yields
+   "." - the C API returns "." for an empty GT vector as well. */
 static char *sample_gt(const Rec *r, int sample_idx) {
     if (r->nf < 10) return strdup(".");
     int nfk;
@@ -262,9 +347,37 @@ static char *sample_field(const Rec *r, int sample_idx, const char *key) {
 }
 
 /* ------------------------------------------------------------------ */
-/* merging (mirrors vcf.zig expand_ref/expand_alt/expand_info) */
+/* merging - a 1:1 port of vcf.zig expand_ref/expand_alt/expand_info.
+   zig operates on Variant structs that wrap C++ Variant objects via
+   the C API; here records are plain split lines. */
 
-/* expand the reference so it covers all records in the window */
+/* zig: vcf.zig expand_ref():
+       var res = ArrayList(u8){};
+       res.appendSlice(allocator, first.ref());
+       const left0 = first.pos();
+       for (list.items) |v| {
+           const right0 = left0 + res.items.len;   <- grows each round
+           const left1 = v.pos();
+           const right1 = left1 + v.ref().len;
+           if (right1 > right0) {
+               if (right0 >= left1) {
+                   const sdiff = right1 - right0;
+                   const pdiff = right0 - left1;
+                   res.appendSlice(allocator, v.ref()[pdiff..pdiff+sdiff]);
+               } else {
+                   res.appendSlice(allocator, v.ref()); // non-overlapping
+               }
+           }
+       }
+
+           ref     sdiff
+   ref0   |AAAAA|------->|
+   ref1    |AAAAAAAAAAAAA|
+          |--->| append |
+           pdiff
+
+   Note right0 is recomputed from the *growing* result each iteration,
+   exactly as here (curlen = b.len). */
 static char *expand_ref(Rec **rs, int n, size_t *outlen) {
     Buf b;
     buf_init(&b);
@@ -289,7 +402,20 @@ static char *expand_ref(Rec **rs, int n, size_t *outlen) {
     return b.s;
 }
 
-/* splice all (single-ALT) variant alleles into the expanded reference */
+/* zig: vcf.zig expand_alt(): splices each single-ALT allele into the
+   expanded reference. zig's comments explain the three cases:
+
+       // SNP       // Insertion      // Deletion
+       //  ref       //  ref           //  ref
+       // ref0 |AAAAAAAA|     ref0 |AAAAA|------->|   ref0 |AAAAA|
+       // p5diff   p3diff=+3   p5diff   p3diff=-8      p5diff  p3diff=+2
+       // SNP   C--->          ref1 |AAAAAAAAAAAAA|     ref1 |AA|--
+
+   nalt = before + alt + after  (or just alt when p5==0 and p3==0).
+
+   DIFFERENCE kept from zig: records with more than one ALT allele are
+   skipped entirely (warn_multialt above) - their genotypes still
+   participate in the merge, exactly as in the zig code. */
 static char **expand_alt(Rec **rs, int n, const char *ref, size_t reflen, int *nout) {
     char **alts = malloc((size_t)n * sizeof(char *));
     int cnt = 0;
@@ -330,7 +456,17 @@ static char **expand_alt(Rec **rs, int n, const char *ref, size_t reflen, int *n
     return alts;
 }
 
-/* collect and comma-join the INFO values of `key` over all records */
+/* zig: vcf.zig expand_info():
+       var ninfo = ArrayList([] const u8){};
+       for (list.items) |v| {
+           for (v.info(name).items) | info_item | {
+               ninfo.append(allocator, info_item) catch unreachable;
+           }
+       }
+   Concatenates the (already comma-split) INFO values of all records
+   in window order; C++ writes them joined with ','. An empty result
+   means the key is dropped from the output (C++ skips empty info
+   vectors in Variant::write). */
 static char *expand_info(Rec **rs, int n, const char *key) {
     Buf b;
     buf_init(&b);
@@ -352,11 +488,39 @@ static char *expand_info(Rec **rs, int n, const char *key) {
 }
 
 /* ------------------------------------------------------------------ */
-/* merged record output */
+/* merged record output - the orchestration in
+   vcf.zig zig_create_multi_allelic_inner():
 
+       var nref = try expand_ref(Variant,vs);
+       mvar.set_ref(c_nref);
+       var nalt = try expand_alt(Variant,first.pos(),c_nref,vs);
+       mvar.set_alt(nalt);
+       const list = [_][] const u8{ "AN","AT","AC","AF","INV","TYPE" };
+       for (list) |name| {
+           var at = try expand_info(Variant,name,vs);
+           mvar.set_info(name,at);
+       }
+       var genotypes_result = try samples.reduce_renumber_genotypes(Variant,vs);
+       mvar.set_samples(genotypes_result.s_samples);
+       if (genotypes_result.g_err != samples.VcfSampleError.None) {
+           ninfo.append(allocator, "ALTPROBLEM") catch {};
+           mvar.set_info("MULTI",ninfo);
+       }
+
+   mvar is the C++ copy of the first record (vcfcreatemulti.cpp
+   createMultiallelic_zig: "Variant nvar = first"), so CHROM/ID/FILTER
+   and all other fields come from record 0; the C++ caller then adds
+   info["combined"] = "front.position-back.position". */
 static void print_merged(Rec **rs, int n) {
     if (n <= 0) return;
-    if (n == 1) {  /* pass through unchanged */
+    /* vcfcreatemulti.cpp createMultiallelic_zig():
+           if (vars.size() == 1) {
+               return vars.front();      // pass through, no combined=
+           }
+       DIFFERENCE: the zig/C++ path re-prints the record through the
+       C++ Variant writer (normalising QUAL '.' to 0, etc); we emit
+       the original line untouched. */
+    if (n == 1) {
         puts(rs[0]->raw);
         return;
     }
@@ -372,7 +536,17 @@ static void print_merged(Rec **rs, int n) {
     int nalt;
     char **alts = expand_alt(rs, n, ref, reflen, &nalt);
 
-    /* genotypes: merge per sample, renumbering by variant index */
+    /* genotypes: zig samples.reduce_renumber_genotypes():
+           for (vs.items, 0..) | v,i | {
+               for (v.genotypes().items, 0..) | geno,j | {
+                   var geno2 = try Genotypes.init(geno);
+                   try geno2.renumber(i);        <- offset = window index
+                   if (i==0) sample_list.append(geno2)
+                   else sample_list.items[j].merge(geno2)
+               }
+           }
+       The base genotype comes from record 0; records i>0 are renumbered
+       by i and merged in. Any conflict sets g_err -> MULTI=ALTPROBLEM. */
     int nsamples = first->nf - 9;
     if (nsamples < 0) nsamples = 0;
     char **sample_out = malloc((size_t)(nsamples > 0 ? nsamples : 1) * sizeof(char *));
@@ -394,8 +568,12 @@ static void print_merged(Rec **rs, int n) {
         gt_free(&base);
     }
 
-    /* INFO: original keys in order, merged values for AN,AT,AC,AF,INV,TYPE,
-       then remaining merged keys sorted (ASCII), then combined/MULTI */
+    /* INFO output. The zig code calls mvar.set_info(name, values) for
+       AN,AT,AC,AF,INV,TYPE; C++ Variant::write (src/Variant.cpp) then
+       prints keys in their original record order, followed by keys
+       added after parsing (MULTI, combined, or merged keys absent from
+       the first record) in ASCII sorted order - hence MULTI before
+       combined. We reproduce that exact ordering here. */
     static const char *merge_keys[] = { "AN", "AT", "AC", "AF", "INV", "TYPE" };
     const int nmerge_keys = 6;
     char *merged[6];
@@ -478,10 +656,17 @@ static void print_merged(Rec **rs, int n) {
     /* output record */
     printf("%s\t%ld\t%s\t%s\t", first->f[0], pos0, first->f[2], ref);
     for (int a = 0; a < nalt; a++) printf("%s%s", a ? "," : "", alts[a]);
+    /* QUAL/FILTER: zig leaves mvar's first-record fields in place, but
+       the C++ Variant writer prints quality as a double ("." parses to
+       0), which is why zig output shows 0 where the input has '.'.
+       %g matches the default C++ ostream double formatting. */
     printf("\t%g\t%s\t%s", strtod(first->f[5], NULL), first->f[6], info.s);
 
-    /* sample columns: merged GT + the other FORMAT fields of the first
-       record (the zig code only updates GT) */
+    /* Sample columns: the zig code calls mvar.set_samples() which only
+       replaces the GT field (var_set_sample pushes to
+       samples[sname]["GT"]); all other FORMAT fields keep the values
+       of the FIRST record - including the now possibly mismatched
+       DS/GP values. Same behaviour here. */
     if (nsamples > 0 && first->nf > 8 && first->f[8][0]) {
         int nfk;
         char **fk = split_inplace(first->f[8], ':', &nfk);
@@ -526,6 +711,21 @@ static void usage(void) {
     exit(1);
 }
 
+/* Windowing - a port of the main() loop in vcfcreatemulti.cpp:
+
+       auto first = vars.front();
+       auto maxpos = first.position + first.ref.size();
+       for (const auto& v: vars)
+           if (maxpos < v.position + v.ref.size()) maxpos = ...;
+
+       if (var.sequenceName != lastSeqName)   flush (next chromosome)
+       else if (var.position < maxpos)        push (in window)
+       else                                   flush (out of window)
+
+   The window only ever grows: maxpos is recomputed from all records
+   accumulated so far, so a long insertion keeps pulling later records
+   into the same merge. The unsorted check (exit 8) is also from the
+   C++ main loop. */
 int main(int argc, char **argv) {
     FILE *fp = stdin;
     for (int i = 1; i < argc; i++) {
@@ -546,6 +746,8 @@ int main(int argc, char **argv) {
     char *last_seq = NULL;
 
     while ((len = getline(&buf, &cap, fp)) != -1) {
+        /* header lines pass through; add the INFO definitions that
+           vcfcreatemulti.cpp registers via variantFile.addHeaderLine() */
         if (len > 0 && (buf[0] == '#' || buf[0] == '\n' || buf[0] == '\r')) {
             /* insert the INFO header lines used by the merger */
             if (buf[0] == '#' && buf[1] == 'C') {
