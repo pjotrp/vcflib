@@ -72,6 +72,14 @@ int main(int argc, char **argv) {
         }
     }
 
+    if (records == 0) {
+        fprintf(stderr,
+                "vcfvalidate: no data records found - file is empty or contains only header lines\n");
+        free(buf);
+        if (fp != stdin) fclose(fp);
+        return 1;
+    }
+
     if (!quiet)
         fprintf(stderr,
                 "vcfvalidate: checked %ld records, found %ld error(s)\n",

@@ -70,6 +70,15 @@ vcfvalidate: checked 5 records, found 3 error(s)
 
 ```
 
+An empty or header-only file is an error:
+
+```
+
+>>> sh("vcfvalidate ../test/data/inputs/vcfvalidate-empty.vcf")
+vcfvalidate: no data records found - file is empty or contains only header lines
+
+```
+
 Quiet mode only sets the exit status:
 
 ```

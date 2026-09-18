@@ -247,6 +247,22 @@ See 'caveat' section [above](#Too-many-variants).
 
 Your VCF already contains multi-allele entries - bring them back to one single ALT per record/line.
 
+# VALIDATING GENERATED OUTPUT
+
+The output of every regression run above is validated with
+[vcfvalidate](./vcfvalidate.md):
+
+```
+
+>>> sh("for n in 2 3 4 5 6 7; do vcfvalidate -q ../test/tmp/vcfcreatemulti_$n.vcf || echo FAILED $n; done; echo ALL_VALID")
+ALL_VALID
+
+```
+
+Note: outputs with MULTI=ALTPROBLEM records can carry genotypes that
+violate the VCF spec (see vcfputtogetheragain.md for a discussion) -
+none of the regression runs above produce them.
+
 # LICENSE
 
 Copyright 2022-2025 (C) Erik Garrison, Pjotr Prins and vcflib contributors. MIT licensed.

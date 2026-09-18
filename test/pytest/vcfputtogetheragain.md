@@ -123,6 +123,35 @@ output in <a href="../data/regression/vcfputtogetheragain_7.vcf">vcfputtogethera
 
 ```
 
+# VALIDATING GENERATED OUTPUT
+
+The output of every regression run above is itself validated with
+[vcfvalidate](./vcfvalidate.md). Outputs without MULTI=ALTPROBLEM
+records must be fully valid:
+
+```
+
+>>> sh("for n in 2 3 4 5 6; do vcfvalidate -q ../test/tmp/vcfputtogetheragain_$n.vcf || echo FAILED $n; done; echo ALL_VALID")
+ALL_VALID
+
+```
+
+Outputs with MULTI=ALTPROBLEM records are a documented caveat (the
+zig merge semantics drop the multi-allelic record's ALT alleles but
+keep its renumbered genotypes, so such records can carry allele
+indices beyond the ALT count). We assert that every validation error
+sits on a MULTI=ALTPROBLEM record:
+
+```
+
+>>> sh("vcfvalidate ../test/tmp/vcfputtogetheragain_7.vcf 2>&1 >/dev/null | grep '^  line:' | grep -vc MULTI=ALTPROBLEM")
+0
+
+>>> sh("vcfvalidate ../test/tmp/vcfputtogetheragain_8.vcf 2>&1 >/dev/null | grep '^  line:' | grep -vc MULTI=ALTPROBLEM")
+0
+
+```
+
 # LICENSE
 
 Copyright 2025 (C) Erik Garrison, Pjotr Prins and vcflib contributors. MIT licensed.
