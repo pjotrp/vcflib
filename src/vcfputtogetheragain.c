@@ -418,15 +418,17 @@ static char *expand_ref(Rec **rs, int n, size_t *outlen) {
    DIFFERENCE kept from zig: records with more than one ALT allele are
    skipped entirely (warn_multialt above) - their genotypes still
    participate in the merge, exactly as in the zig code. */
-static char **expand_alt(Rec **rs, int n, const char *ref, size_t reflen, int *nout) {
-    char **alts = malloc((size_t)n * sizeof(char *));
+static char **expand_alt(Rec **rs, int n, const char *ref, size_t reflen, int *nout, int norm_multi) {
+    /* in norm-multiallelic mode the array can grow beyond n records */
+    char **alts = malloc((size_t)(norm_multi ? 4 * n + 4 : n) * sizeof(char *));
+    int cap = norm_multi ? 4 * n + 4 : n;
     int cnt = 0;
     long pos0 = rs[0]->pos;
     for (int i = 0; i < n; i++) {
         if (rs[i]->pos < pos0) continue;
         int nalt;
         char **var_alts = split_inplace(rs[i]->f[4], ',', &nalt);
-        if (nalt > 1) {  /* zig bails out on multi-allelic records */
+        if (nalt > 1 && !norm_multi) {  /* zig bails out on multi-allelic records */
             warn_multialt();
             free(var_alts);
             continue;
@@ -442,16 +444,19 @@ static char **expand_alt(Rec **rs, int n, const char *ref, size_t reflen, int *n
             after = ref + reflen - (size_t)p3;
             after_len = (size_t)p3;
         }
-        Buf t;
-        buf_init(&t);
-        if (p5 != 0 || p3 != 0) {
-            buf_append_n(&t, ref, before_len);
-            buf_append(&t, var_alts[0]);
-            buf_append_n(&t, after, after_len);
-        } else {
-            buf_append(&t, var_alts[0]);
+        for (int k = 0; k < nalt; k++) {
+            Buf t;
+            buf_init(&t);
+            if (p5 != 0 || p3 != 0) {
+                buf_append_n(&t, ref, before_len);
+                buf_append(&t, var_alts[k]);
+                buf_append_n(&t, after, after_len);
+            } else {
+                buf_append(&t, var_alts[k]);
+            }
+            if (cnt == cap) { cap *= 2; alts = realloc(alts, (size_t)cap * sizeof(char *)); }
+            alts[cnt++] = t.s;
         }
-        alts[cnt++] = t.s;
         free(var_alts);
     }
     *nout = cnt;
@@ -513,7 +518,7 @@ static char *expand_info(Rec **rs, int n, const char *key) {
    createMultiallelic_zig: "Variant nvar = first"), so CHROM/ID/FILTER
    and all other fields come from record 0; the C++ caller then adds
    info["combined"] = "front.position-back.position". */
-static void print_merged(Rec **rs, int n) {
+static void print_merged(Rec **rs, int n, int norm_multi) {
     if (n <= 0) return;
     /* vcfcreatemulti.cpp createMultiallelic_zig():
            if (vars.size() == 1) {
@@ -536,7 +541,25 @@ static void print_merged(Rec **rs, int n) {
 
     /* alts */
     int nalt;
-    char **alts = expand_alt(rs, n, ref, reflen, &nalt);
+    char **alts = expand_alt(rs, n, ref, reflen, &nalt, norm_multi);
+
+    /* genotype renumber offsets: zig parity renumbers by window record
+       index; --norm-multiallelic renumbers by the cumulative number of
+       ALT alleles contributed by the preceding records, so every allele
+       index stays within the merged ALT list (mirrors
+       `bcftools norm -m-`). */
+    int *renum = malloc((size_t)n * sizeof(int));
+    if (norm_multi) {
+        int off = 0;
+        for (int i = 0; i < n; i++) {
+            renum[i] = off;
+            for (const char *q = rs[i]->f[4]; *q; q++)
+                if (*q == ',') off++;
+            off++;
+        }
+    } else {
+        for (int i = 0; i < n; i++) renum[i] = i;
+    }
 
     /* genotypes: zig samples.reduce_renumber_genotypes():
            for (vs.items, 0..) | v,i | {
@@ -562,7 +585,7 @@ static void print_merged(Rec **rs, int n) {
             char *gti = sample_gt(rs[i], j);
             GT g2 = gt_parse(gti);
             free(gti);
-            gt_renumber(&g2, i);
+            gt_renumber(&g2, renum[i]);
             if (gt_merge(&base, &g2)) problem = 1;
             gt_free(&g2);
         }
@@ -691,6 +714,7 @@ static void print_merged(Rec **rs, int n) {
     printf("\n");
 
     /* cleanup */
+    free(renum);
     free(ref);
     for (int a = 0; a < nalt; a++) free(alts[a]);
     free(alts);
@@ -710,7 +734,12 @@ static void usage(void) {
             "options:\n\n"
             "    -h, --help       this help\n"
             "    --validate       run the expensive VCF standard checks\n"
-            "                     (per-sample GT allele range validation)\n\n"
+            "                     (per-sample GT allele range validation)\n"
+            "    --norm-multiallelic keep all ALT alleles of multi-allelic input\n"
+            "                     records in the merged record (mirrors\n"
+            "                     `bcftools norm -m-`); merged records stay\n"
+            "                     valid, MULTI=ALTPROBLEM then only marks\n"
+            "                     true genotype conflicts\n\n"
             "Type: transformation\n");
     exit(1);
 }
@@ -733,11 +762,14 @@ static void usage(void) {
 int main(int argc, char **argv) {
     FILE *fp = stdin;
     int level = VCFSTD_BASIC;   /* --validate enables the expensive checks */
+    int norm_multi = 0;         /* --norm-multiallelic keeps all ALT alleles */
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0)
             usage();
         else if (strcmp(argv[i], "--validate") == 0)
             level = VCFSTD_DEEP;
+        else if (strcmp(argv[i], "--norm-multiallelic") == 0)
+            norm_multi = 1;
         else {
             fp = fopen(argv[i], "r");
             if (!fp) { perror(argv[i]); return 1; }
@@ -802,7 +834,7 @@ int main(int argc, char **argv) {
                 flush = 1;
             }
             if (flush) {
-                print_merged(vars, nvars);
+                print_merged(vars, nvars, norm_multi);
                 for (int i = 0; i < nvars; i++) rec_free(vars[i]);
                 nvars = 0;
                 free(last_seq);
@@ -816,7 +848,7 @@ int main(int argc, char **argv) {
         vars[nvars++] = r;
     }
     if (nvars > 0) {
-        print_merged(vars, nvars);
+        print_merged(vars, nvars, norm_multi);
         for (int i = 0; i < nvars; i++) rec_free(vars[i]);
     }
     free(vars);

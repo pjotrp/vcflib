@@ -25,6 +25,10 @@ It replicates the semantics of the zig code path of vcfcreatemulti:
 - INFO values of AN,AT,AC,AF,INV,TYPE are concatenated
 - sample genotypes are merged and allele indices renumbered; on
   conflicts the record is flagged with MULTI=ALTPROBLEM
+- with --norm-multiallelic, all ALT alleles of multi-allelic input
+  records are kept in the merged record (mirroring
+  `bcftools norm -m-`); merged records then always satisfy the VCF
+  spec and MULTI=ALTPROBLEM only marks true genotype conflicts
 - the merged range is recorded in INFO combined=POS-POS
 
 Differences from vcfcreatemulti:
@@ -38,6 +42,17 @@ Differences from vcfcreatemulti:
 -h, --help
 
 : shows help message and exits.
+
+--norm-multiallelic
+
+: keep all ALT alleles of multi-allelic input records in the merged
+  record (mirrors `bcftools norm -m-`). Without this option the zig
+  semantics drop those alleles from the merged ALT list while keeping
+  their renumbered genotypes, which can produce records that violate
+  the VCF spec (flagged MULTI=ALTPROBLEM). With it, merged records
+  always satisfy the spec and MULTI=ALTPROBLEM only marks true
+  genotype conflicts (a sample called for two different alleles
+  across overlapping records).
 
 See more below.
 
@@ -71,6 +86,11 @@ options:
     -h, --help       this help
     --validate       run the expensive VCF standard checks
                      (per-sample GT allele range validation)
+    --norm-multiallelic keep all ALT alleles of multi-allelic input
+                     records in the merged record (mirrors
+                     `bcftools norm -m-`); merged records stay
+                     valid, MULTI=ALTPROBLEM then only marks
+                     true genotype conflicts
 >
 Type: transformation
 >

@@ -573,6 +573,7 @@ if (ZIG)
 endif (ZIG)
 add_pydoctest(vcfputtogetheragain)
 add_pydoctest(vcf-std)
+add_pydoctest(vcfputtogetheragain-norm)
 add_pydoctest(vcfvalidate)
 
 add_pydoctest(vcfnulldotslashdot)
@@ -603,6 +604,8 @@ if (PANDOC)
         COMMAND ${CMAKE_COMMAND} -E copy ./test/pytest/vcfallelicprimitives.md ./doc/vcfallelicprimitives.md
         COMMAND ${CMAKE_COMMAND} -E copy ./test/pytest/vcfwave.md ./doc/vcfwave.md
         COMMAND ${CMAKE_COMMAND} -E copy ./test/pytest/vcfcreatemulti.md ./doc/vcfcreatemulti.md
+        COMMAND ${CMAKE_COMMAND} -E copy ./test/pytest/vcfputtogetheragain.md ./doc/vcfputtogetheragain.md
+        COMMAND ${CMAKE_COMMAND} -E copy ./test/pytest/vcfputtogetheragain-norm.md ./doc/vcfputtogetheragain-norm.md
         COMMAND ${CMAKE_COMMAND} -E copy ./test/pytest/vcflib-api.md ./doc/vcflib-api.md
         COMMAND ${CMAKE_COMMAND} -E copy ./test/pytest/pyvcflib.md ./doc/pyvcflib.md
         # generate man pages from markdown
@@ -614,6 +617,8 @@ if (PANDOC)
         COMMAND ${CMAKE_COMMAND} -E copy ./test/pytest/vcfallelicprimitives.md ./doc/vcfallelicprimitives.md
         COMMAND ${CMAKE_COMMAND} -E copy ./test/pytest/vcfwave.md ./doc/vcfwave.md
         COMMAND ${CMAKE_COMMAND} -E copy ./test/pytest/vcfcreatemulti.md ./doc/vcfcreatemulti.md
+        COMMAND ${CMAKE_COMMAND} -E copy ./test/pytest/vcfputtogetheragain.md ./doc/vcfputtogetheragain.md
+        COMMAND ${CMAKE_COMMAND} -E copy ./test/pytest/vcfputtogetheragain-norm.md ./doc/vcfputtogetheragain-norm.md
         # Documented test cases for Python bindings
         COMMAND ${CMAKE_COMMAND} -E copy ./test/pytest/pyvcflib.md ./doc/pyvcflib.md
         COMMAND ${CMAKE_COMMAND} -E copy ./test/pytest/vcflib-api.md ./doc/vcflib-api.md

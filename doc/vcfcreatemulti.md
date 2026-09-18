@@ -115,6 +115,10 @@ What `vcfcreatemulti` helps to do is point out that there is a complex region he
 
 To help vcflib show's a `WARNING: Too many ALT alleles to fit in sample(s)' and we add an INFO tag "MULTI=ALTPROBLEM". Searching for these will give an idea of this issue. E.g.
 
+The plain C alternative `vcfputtogetheragain --norm-multiallelic` avoids
+these invalid records by keeping all ALT alleles of multi-allelic
+input records in the merged record (mirroring `bcftools norm -m-`).
+
 ```
 grep MULTI= ./test/tmp/vcfcreatemulti_2.vcf -c
 ```

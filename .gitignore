@@ -140,3 +140,4 @@ src/zig/h/
 src/zig/o/
 src/zig/z/
 
+__pycache__/
