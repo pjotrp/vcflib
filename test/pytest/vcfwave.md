@@ -169,6 +169,18 @@ a       281     >1>9    AGCCGGGGCAGAAAGTTCTTCCTTGAATGTGGTCATCTGCATTTCAGCTCAGGAAT
 
 Note the `INV=YES' info.
 
+# VALIDATING GENERATED OUTPUT
+
+The VCF output of every regression run above is validated with
+[vcfvalidate](./vcfvalidate.md):
+
+```
+
+>>> sh("for f in ../test/tmp/vcfwave_*.vcf; do vcfvalidate -q $f || echo FAILED $f; done; echo ALL_VALID")
+ALL_VALID
+
+```
+
 # LICENSE
 
 Copyright 2022-2025 (C) Erik Garrison, Pjotr Prins and vcflib contributors. MIT licensed.

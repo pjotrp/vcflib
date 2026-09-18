@@ -303,6 +303,18 @@ Output produced by test/tests/realign.py
 
 
 
+# VALIDATING GENERATED OUTPUT
+
+The VCF output of every regression run above is validated with
+[vcfvalidate](./vcfvalidate.md):
+
+```
+
+>>> sh("for f in ../test/tmp/vcfallelicprimitives_*.vcf; do vcfvalidate -q $f || echo FAILED $f; done; echo ALL_VALID")
+ALL_VALID
+
+```
+
 # LICENSE
 
 Copyright 2011-2025 (C) Erik Garrison, Pjotr Prins and vcflib contributors. MIT licensed.

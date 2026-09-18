@@ -110,6 +110,18 @@ will filter all AC fields larger than 10.
 
 [vcffilter.cpp](https://github.com/vcflib/vcflib/blob/master/src/vcffilter.cpp)
 
+# VALIDATING GENERATED OUTPUT
+
+The VCF regression output is validated with
+[vcfvalidate](./vcfvalidate.md):
+
+```
+
+>>> sh("vcfvalidate data/regression/vcffilter_2.vcf")
+vcfvalidate: checked 3 records, found 0 error(s)
+
+```
+
 # LICENSE
 
 Copyright 2011-2023 (C) Erik Garrison and vcflib contributors. MIT licensed.

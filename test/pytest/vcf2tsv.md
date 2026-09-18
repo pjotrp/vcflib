@@ -94,6 +94,13 @@ output in <a href="../data/regression/vcf2tsv_4.tsv">vcf2tsv_4.tsv</a>
 output in <a href="../data/regression/vcf2tsv_5.tsv">vcf2tsv_5.tsv</a>
 
 
+# VALIDATING GENERATED OUTPUT
+
+vcf2tsv emits TSV, not VCF, so there is nothing to validate with
+[vcfvalidate](./vcfvalidate.md) here. The input VCF is covered by the
+vcfputtogetheragain/vcfcreatemulti regression runs which validate the
+same input files.
+
 # LICENSE
 
 Copyright 2020 (C) Erik Garrison and vcflib contributors. MIT licensed.
