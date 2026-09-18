@@ -1,0 +1,9 @@
+##fileformat=VCFv4.2
+##INFO=<ID=AF,Number=A,Type=Float,Description="Allele frequency">
+##contig=<ID=chr1,length=50000>
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO	FORMAT	S1
+chr1	100	rs1	A	C,G	29	PASS	AF=0.5,0.25	GT	0/2
+chr1	200	.	A	T	.	.	DP=10	GT:DP	1|0:7
+chr1	300	.	A	C	29	PASS	AF=0.5;AF=0.5	GT	0|1
+chr1	400	.	A		29	PASS	.	GT	0|1
+chr1	500	.	A	C	29	q10;q10	.	GT	0|1

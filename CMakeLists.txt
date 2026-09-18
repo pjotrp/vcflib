@@ -485,6 +485,11 @@ if (NOT BUILD_ONLY_LIB)
   add_executable(vcfputtogetheragain src/vcfputtogetheragain.c src/vcf-std.c)
   install(TARGETS vcfputtogetheragain RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
+  # ---- vcfvalidate: reports VCFv4.5 field errors for every data line
+  # (uses the same vcf-std validator; strict, never lenient)
+  add_executable(vcfvalidate src/vcfvalidate.c src/vcf-std.c)
+  install(TARGETS vcfvalidate RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
   # ---- Copy scripts
   foreach(SCRIPT ${SCRIPTS})
     install(PROGRAMS ./scripts/${SCRIPT} DESTINATION ${CMAKE_INSTALL_BINDIR} RENAME ${SCRIPT})
@@ -568,6 +573,7 @@ if (ZIG)
 endif (ZIG)
 add_pydoctest(vcfputtogetheragain)
 add_pydoctest(vcf-std)
+add_pydoctest(vcfvalidate)
 
 add_pydoctest(vcfnulldotslashdot)
 add_doctest(doc/vcfintersect)
