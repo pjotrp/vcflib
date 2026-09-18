@@ -1,4 +1,4 @@
-% VCFPUTTOGETHERAGAIN-FUZZ(1) vcfputtogetheragain --norm-multiallelic | VCF transformation
+% VCFPUTTOGETHERAGAIN-NORM(1) vcfputtogetheragain --norm-multiallelic | VCF transformation
 % Pjotr Prins and vcflib contributors
 
 # NAME
