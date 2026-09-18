@@ -69,6 +69,8 @@ Go through sorted VCF and when overlapping alleles are represented across multip
 options:
 >
     -h, --help       this help
+    --validate       run the expensive VCF standard checks
+                     (per-sample GT allele range validation)
 >
 Type: transformation
 >

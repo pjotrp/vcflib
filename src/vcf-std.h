@@ -26,6 +26,13 @@ extern "C" {
 #define VCFSTD_OK  0
 #define VCFSTD_ERR 1   /* any validation failure; see vcfstd_error.msg */
 
+/* validation levels: the basic level runs all per-field grammar checks
+   (linear scans, no per-sample allocations); the DEEP flag adds the
+   expensive per-sample checks - full GT validation including the
+   allele-range check against the record's ALT count */
+#define VCFSTD_BASIC 0
+#define VCFSTD_DEEP  1
+
 typedef struct {
     int  code;      /* VCFSTD_OK or VCFSTD_ERR */
     int  field;     /* 0-based field index in the record, -1 = n/a */
@@ -34,8 +41,12 @@ typedef struct {
 } vcfstd_error;
 
 /* Validate one complete data line (no trailing newline). Checks the 8
-   fixed fields, the FORMAT column and all sample columns. Returns
-   VCFSTD_OK or VCFSTD_ERR with err filled in. */
+   fixed fields, the FORMAT column and all sample columns. level is
+   VCFSTD_BASIC or VCFSTD_DEEP. Returns VCFSTD_OK or VCFSTD_ERR with
+   err filled in. */
+int vcfstd_validate_record_flags(const char *line, int level, vcfstd_error *err);
+
+/* convenience wrapper: full (DEEP) validation */
 int vcfstd_validate_record(const char *line, vcfstd_error *err);
 
 /* Granular validators - exposed for testing and reuse. Each returns

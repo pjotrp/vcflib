@@ -281,7 +281,7 @@ ValueError: FORMAT column present but no sample columns follow (VCFv4.5 section 
 >>> validate_record("20\t14370\t.\tG\tA\t29\tPASS\t.\tGT\t0|0:5")
 Traceback (most recent call last):
 ...
-ValueError: sample has 2 value(s) but FORMAT declares 1 key(s) (VCFv4.5 section 1.6.1)
+ValueError: sample has more value(s) than the 1 FORMAT key(s) declare (VCFv4.5 section 1.6.1)
 >>> validate_record("20\t111\t.\tA\t.\t9.6\t.\t.\tGT:HQ\t0|0:10,10\t0|0:10,10\t0/1:3,3")
 Traceback (most recent call last):
 ...

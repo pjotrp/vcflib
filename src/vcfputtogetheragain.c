@@ -708,7 +708,9 @@ static void usage(void) {
             "\nUsage: vcfputtogetheragain [options] [file]\n\n"
             "Go through sorted VCF and when overlapping alleles are represented across multiple records, merge them into a single multi-ALT record. Plain C alternative to the zig implementation of vcfcreatemulti.\n\n"
             "options:\n\n"
-            "    -h, --help       this help\n\n"
+            "    -h, --help       this help\n"
+            "    --validate       run the expensive VCF standard checks\n"
+            "                     (per-sample GT allele range validation)\n\n"
             "Type: transformation\n");
     exit(1);
 }
@@ -730,9 +732,12 @@ static void usage(void) {
    C++ main loop. */
 int main(int argc, char **argv) {
     FILE *fp = stdin;
+    int level = VCFSTD_BASIC;   /* --validate enables the expensive checks */
     for (int i = 1; i < argc; i++) {
         if (strcmp(argv[i], "-h") == 0 || strcmp(argv[i], "--help") == 0)
             usage();
+        else if (strcmp(argv[i], "--validate") == 0)
+            level = VCFSTD_DEEP;
         else {
             fp = fopen(argv[i], "r");
             if (!fp) { perror(argv[i]); return 1; }
@@ -764,7 +769,7 @@ int main(int argc, char **argv) {
         /* strict VCFv4.5 field validation - a malformed line is a hard
            error; malformed data is never passed into the merger */
         vcfstd_error err;
-        if (vcfstd_validate_record(buf, &err) != VCFSTD_OK) {
+        if (vcfstd_validate_record_flags(buf, level, &err) != VCFSTD_OK) {
             char msg[512];
             vcfstd_error_string(&err, msg, sizeof(msg));
             fprintf(stderr, "ERROR: invalid VCF data line %ld: %s\n  line: %s", lineno, msg, buf);

@@ -59,9 +59,12 @@ PYBIND11_MODULE(pyvcfstd, m) {
         return n;
     }, py::arg("alt"), "Number of ALT alleles ('.' counts as 0)");
 
-    m.def("validate_record", [](const std::string &line) {
+    m.def("validate_record", [](const std::string &line, bool deep) {
         vcfstd_error err;
-        raise_on_error(vcfstd_validate_record(line.c_str(), &err), err);
-    }, py::arg("line"),
-       "Validate a complete VCF data line; raises ValueError on invalid input");
+        raise_on_error(vcfstd_validate_record_flags(
+                           line.c_str(), deep ? VCFSTD_DEEP : VCFSTD_BASIC, &err),
+                       err);
+    }, py::arg("line"), py::arg("deep") = true,
+       "Validate a complete VCF data line; raises ValueError on invalid input. "
+       "deep=True (default) also runs the expensive per-sample GT range checks.");
 }

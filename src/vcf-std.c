@@ -640,8 +640,9 @@ done:
 /* ------------------------------------------------------------------ */
 /* full record validation */
 
-int vcfstd_validate_record(const char *line, vcfstd_error *err) {
+int vcfstd_validate_record_flags(const char *line, int level, vcfstd_error *err) {
     ok(err);
+    const int deep = (level == VCFSTD_DEEP);
 
     /* work on a mutable copy so fields can be split in place; strip
        the trailing line separator (CR+LF or LF, section 1.3) */
@@ -715,35 +716,69 @@ int vcfstd_validate_record(const char *line, vcfstd_error *err) {
         }
         if (nf > 9) {
             if (vcfstd_check_format(fields[8], err) != VCFSTD_OK) break;
-            /* validate each sample against the FORMAT; GT is validated
-               with the actual ALT count */
-            char *fmt = strdup(fields[8]);
-            int nfk;
-            char **fk = split_inplace_colon(fmt, &nfk);
+            /* per-sample validation, allocation-free: walk each sample
+               column against the FORMAT keys. GT is always the first
+               FORMAT key when present (enforced by check_format), so
+               the GT subfield is the first ':'-separated value. */
+            int nfk = 1;
+            for (const char *q = fields[8]; *q; q++)
+                if (*q == ':') nfk++;
+            int has_gt = (strncmp(fields[8], "GT", 2) == 0 &&
+                          (fields[8][2] == 0 || fields[8][2] == ':'));
             int sample_failed = 0;
             for (int s = 9; s < nf; s++) {
-                if (vcfstd_check_sample(fields[8], fields[s], err) != VCFSTD_OK) {
-                    if (err) err->field = s;
+                const char *v = fields[s];
+                if (has_gt && v[0] == 0) {
+                    if (err) { err->field = s; }
+                    fail(err, s, 0,
+                         "sample column is empty but FORMAT declares GT - the GT field must always be present "
+                         "(VCFv4.5 section 1.6.1: only trailing fields can be dropped)");
                     sample_failed = 1;
                     break;
                 }
-                /* GT validation with the record's ALT count */
-                char *smp = strdup(fields[s]);
-                int nsv;
-                char **sv = split_inplace_colon(smp, &nsv);
-                for (int k = 0; k < nfk && k < nsv; k++) {
-                    if (strcmp(fk[k], "GT") == 0) {
-                        if (vcfstd_check_gt(sv[k], nalt, err) != VCFSTD_OK) {
+                int idx = 0;
+                const char *start = v;
+                for (const char *q = v; ; q++) {
+                    if (*q == ':' || *q == 0) {
+                        size_t len = (size_t)(q - start);
+                        if (len == 0) {
                             if (err) err->field = s;
+                            fail(err, s, (int)(start - v),
+                                 "sample value %d is empty - use '.' for missing values (VCFv4.5 section 1.6.1)",
+                                 idx + 1);
                             sample_failed = 1;
+                            break;
                         }
-                        break;
+                        if (idx >= nfk) {
+                            if (err) err->field = s;
+                            fail(err, s, 0,
+                                 "sample has more value(s) than the %d FORMAT key(s) declare "
+                                 "(VCFv4.5 section 1.6.1)", nfk);
+                            sample_failed = 1;
+                            break;
+                        }
+                        if (idx == 0 && has_gt) {
+                            /* GT: grammar always; the (expensive) allele
+                               range check only in DEEP mode. The subfield
+                               is ':'-separated, so terminate it
+                               temporarily in our mutable copy. */
+                            char saved = *q;
+                            *(char *)q = 0;
+                            int rc = vcfstd_check_gt(start, deep ? nalt : 1000000, err);
+                            *(char *)q = saved;
+                            if (rc != VCFSTD_OK) {
+                                if (err) err->field = s;
+                                sample_failed = 1;
+                                break;
+                            }
+                        }
+                        if (*q == 0) break;
+                        idx++;
+                        start = q + 1;
                     }
                 }
-                free(sv); free(smp);
                 if (sample_failed) break;
             }
-            free(fk); free(fmt);
             if (sample_failed) break;
         }
         rc = VCFSTD_OK;
@@ -752,4 +787,9 @@ int vcfstd_validate_record(const char *line, vcfstd_error *err) {
     free(fields);
     free(copy);
     return rc;
+}
+
+/* convenience wrapper: full (DEEP) validation */
+int vcfstd_validate_record(const char *line, vcfstd_error *err) {
+    return vcfstd_validate_record_flags(line, VCFSTD_DEEP, err);
 }
